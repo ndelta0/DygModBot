@@ -155,34 +155,31 @@ namespace DygBot.Services
                 }
                 await msg.AddReactionsAsync(emotes.ToArray());
             }
-            else
+            string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
+
+            int argPos = 0;     // Check if the message has a valid command prefix
+            if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
             {
-                string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
+                var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
 
-                int argPos = 0;     // Check if the message has a valid command prefix
-                if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
+                if (!result.IsSuccess)
                 {
-                    var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
-
-                    if (!result.IsSuccess)
+                    switch (result.Error)
                     {
-                        switch (result.Error)
-                        {
-                            case CommandError.UnknownCommand:
-                                break;
+                        case CommandError.UnknownCommand:
+                            break;
 
-                            case CommandError.BadArgCount:
-                                await context.Channel.SendMessageAsync("Wrong argument count");
-                                break;
+                        case CommandError.BadArgCount:
+                            await context.Channel.SendMessageAsync("Wrong argument count");
+                            break;
 
-                            case CommandError.UnmetPrecondition:
-                                await context.Channel.SendMessageAsync(result.ErrorReason);
-                                break;
+                        case CommandError.UnmetPrecondition:
+                            await context.Channel.SendMessageAsync(result.ErrorReason);
+                            break;
 
-                            default:
-                                await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
-                                break;
-                        }
+                        default:
+                            await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
+                            break;
                     }
                 }
             }

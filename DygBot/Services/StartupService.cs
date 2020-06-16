@@ -71,7 +71,7 @@ namespace DygBot.Services
             ITrigger trigger = TriggerBuilder.Create()
                 .WithIdentity("updateCountersTrigger", "discordGroup")
                 .StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
-                .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever())
+                .WithSimpleSchedule(x => x.WithIntervalInMinutes(1).RepeatForever())
                 .Build();
 
             await scheduler.ScheduleJob(job, trigger);

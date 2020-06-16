@@ -61,7 +61,8 @@ namespace DygBot.Services
             var defaultJobDataMap = new JobDataMap()
             {
                 {"Client", _discord },
-                {"GitHub", _gitHub }
+                {"GitHub", _gitHub },
+                {"Logging", _logging }
             };
 
             IJobDetail job = JobBuilder.Create<UpdateCountersJob>()
@@ -90,7 +91,10 @@ namespace DygBot.Services
                 var dataMap = context.JobDetail.JobDataMap;
                 var client = (DiscordSocketClient)dataMap["Client"];
                 var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
 
+                await logging.OnLogAsync(new Discord.LogMessage(Discord.LogSeverity.Info, "Quartz", "Updating counters"));
+                
                 foreach (var kvp in git.Config.Servers)
                 {
                     if (!client.Guilds.Any(x => x.Id.ToString() == kvp.Key))

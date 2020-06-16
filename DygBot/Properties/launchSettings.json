@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DygBot": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "GITHUB_API_TOKEN": "3620d2f5ad7c550458cc3bb6aaa9b63e91940ce9"
+      }
+    }
+  }
+}

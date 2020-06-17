@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Quartz;
 using Quartz.Impl;
@@ -65,17 +66,31 @@ namespace DygBot.Services
                 {"Logging", _logging }
             };
 
-            IJobDetail job = JobBuilder.Create<UpdateCountersJob>()
+            IJobDetail countersJob = JobBuilder.Create<UpdateCountersJob>()
                 .WithIdentity("updateCountersJob", "discordGroup")
                 .UsingJobData(defaultJobDataMap)
                 .Build();
-            ITrigger trigger = TriggerBuilder.Create()
+            ITrigger countersTrigger = TriggerBuilder.Create()
                 .WithIdentity("updateCountersTrigger", "discordGroup")
                 .StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever())
                 .Build();
 
-            await scheduler.ScheduleJob(job, trigger);
+            IJobDetail clearJob = JobBuilder.Create<ClearVcChatJob>()
+                .WithIdentity("clearVcChatJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger clearTrigger = TriggerBuilder.Create()
+                .WithIdentity("cleatVcChatTrigger", "discordGroup")
+                .WithCronSchedule("0 0 6 1/1 * ? *")
+                //.WithCronSchedule("0 0/1 * 1/1 * ? *")
+                .StartNow()
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(1).WithRepeatCount(0))
+                .Build();
+
+            //await scheduler.ScheduleJob(countersJob, countersTrigger);
+            await scheduler.ScheduleJob(clearJob, clearTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
 
@@ -121,6 +136,46 @@ namespace DygBot.Services
                         string changedName = template.Replace("%num%", value.ToString());
                         await channel.ModifyAsync(x => x.Name = changedName);
                     }
+                }
+            }
+        }
+        public class ClearVcChatJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Clearing VC chat"));
+
+                var channelIds = new ulong[] { 720790650982891651, 721114067355435058, 721113555813924885, 721113291677499495 };
+                //var channelIds = new ulong[] { 722187075176235061 };
+                var guild = client.Guilds.First(x => x.Id == 683084560451633212);
+                //var guild = client.Guilds.First(x => x.Id == 685477359213608960);
+
+                foreach (var channelId in channelIds)
+                {
+                    int messagesCleared = 0;
+                    var channel = guild.GetTextChannel(channelId);
+                    bool hasMessages = false;
+                    do
+                    {
+                        var messages = (await channel.GetMessagesAsync().FlattenAsync()).ToList();
+                        hasMessages = messages.Count > 0;
+                        if (hasMessages)
+                        {
+                            if (messages.Last().CreatedAt.UtcDateTime.AddDays(14).CompareTo(DateTime.UtcNow) == 1)
+                            {
+                                messagesCleared += messages.Count;
+                                await channel.DeleteMessagesAsync(messages);
+                            }
+                            else
+                                hasMessages = false;
+                        }
+                    } while (hasMessages);
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", $"Cleared {messagesCleared} messages in {channel.Name}"));
                 }
             }
         }

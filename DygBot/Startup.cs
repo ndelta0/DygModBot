@@ -34,7 +34,8 @@ namespace DygBot
                 .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig   // Add Discord to the collection
                 {
                     LogLevel = LogSeverity.Info,
-                    MessageCacheSize = 1000 // Cache 1000 messages per channel
+                    MessageCacheSize = 1000, // Cache 1000 messages per channel
+                    ExclusiveBulkDelete = true
                 }))
                 .AddSingleton(new CommandService(new CommandServiceConfig   // Add the command service to the collection
                 {

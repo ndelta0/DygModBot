@@ -72,8 +72,10 @@ namespace DygBot.Services
                 .Build();
             ITrigger countersTrigger = TriggerBuilder.Create()
                 .WithIdentity("updateCountersTrigger", "discordGroup")
-                .StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
-                .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever())
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).RepeatForever())
+                .WithCronSchedule("0 0/5 * 1/1 * ? *")
+                .StartNow()
                 .Build();
 
             IJobDetail clearJob = JobBuilder.Create<ClearVcChatJob>()
@@ -89,7 +91,7 @@ namespace DygBot.Services
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(1).WithRepeatCount(0))
                 .Build();
 
-            //await scheduler.ScheduleJob(countersJob, countersTrigger);
+            await scheduler.ScheduleJob(countersJob, countersTrigger);
             await scheduler.ScheduleJob(clearJob, clearTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service

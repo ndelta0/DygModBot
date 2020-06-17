@@ -33,15 +33,15 @@ namespace DygBot
             services
                 .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig   // Add Discord to the collection
                 {
-                    LogLevel = LogSeverity.Info,
+                    LogLevel = LogSeverity.Info,    // Set the log level
                     MessageCacheSize = 1000, // Cache 1000 messages per channel
-                    ExclusiveBulkDelete = true
+                    ExclusiveBulkDelete = true  // Fire only bulk delete or delete event (by default both get fired on bulk delete)
                 }))
                 .AddSingleton(new CommandService(new CommandServiceConfig   // Add the command service to the collection
                 {
-                    LogLevel = LogSeverity.Verbose,
+                    LogLevel = LogSeverity.Verbose, // Set the log level
                     DefaultRunMode = RunMode.Async,  // Force all commands to run async by default
-                    CaseSensitiveCommands = false
+                    CaseSensitiveCommands = false   // Use case insensitive commands (db!, Db!, dB!, DB!, etc.)
                 }))
                 .AddSingleton<HttpClient>() // Add the HttpClient to the collection
                 .AddSingleton<GitHubService>()  // Add the GitHub service to the collection

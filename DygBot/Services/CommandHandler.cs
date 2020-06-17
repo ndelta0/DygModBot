@@ -37,7 +37,7 @@ namespace DygBot.Services
             _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
         }
 
-        private enum VcChangeState
+        private enum VcChangeState  // Enum with states of user being in VC
         {
             None,
             Left,
@@ -49,6 +49,7 @@ namespace DygBot.Services
         {
             if (socketUser is SocketGuildUser user)
             {
+                // Work out user action
                 var state = VcChangeState.None;
                 if (beforeState.VoiceChannel == null && afterState.VoiceChannel != null)
                     state = VcChangeState.Joined;
@@ -65,13 +66,13 @@ namespace DygBot.Services
                     switch (state)
                     {
                         case VcChangeState.Joined:
-                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(afterState.VoiceChannel.Id.ToString(), out roleId);
+                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(afterState.VoiceChannel.Id.ToString(), out roleId); // Try get role ID for channel
                             if (!string.IsNullOrWhiteSpace(roleId))
                             {
-                                var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
+                                var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));  // Get role object
                                 if (role != null)
                                 {
-                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" });
+                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" }); // Add role
                                 }
                             }
                             break;
@@ -83,7 +84,7 @@ namespace DygBot.Services
                                 var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });
+                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });    // Remove role
                                 }
                             }
                             break;
@@ -95,7 +96,7 @@ namespace DygBot.Services
                                 var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });
+                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });    // Remove role
                                 }
                             }
 
@@ -105,7 +106,7 @@ namespace DygBot.Services
                                 var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" });
+                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" }); // Add role
                                 }
                             }
 
@@ -134,12 +135,14 @@ namespace DygBot.Services
 
             var context = new SocketCommandContext(_discord, msg);     // Create the command context
 
-            var guildId = context.Guild.Id.ToString();
+            var guildId = context.Guild.Id.ToString();  // Get guild ID
 
-            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id.ToString()))
+            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
             {
-                var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id.ToString()];
-                List<IEmote> emotes = new List<IEmote>(emotesString.Count);
+                var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id.ToString()];   // Get strings of emotes
+                List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
+
+                // Parse emotes
                 foreach (var text in emotesString)
                 {
                     IEmote emote;
@@ -153,7 +156,7 @@ namespace DygBot.Services
                     }
                     emotes.Add(emote);
                 }
-                await msg.AddReactionsAsync(emotes.ToArray());
+                await msg.AddReactionsAsync(emotes.ToArray());  // React with emotes
             }
             string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
 

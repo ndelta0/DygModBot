@@ -10,8 +10,8 @@ namespace DygBot.TypeReaders
     {
         public override Task<TypeReaderResult> ReadAsync(ICommandContext context, string input, IServiceProvider services)
         {
-            object result = input;
-            return Task.FromResult(TypeReaderResult.FromSuccess(result));
+            object result = input;  // Get command input
+            return Task.FromResult(TypeReaderResult.FromSuccess(result));   // Return input
         }
     }
 }

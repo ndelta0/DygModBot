@@ -30,15 +30,15 @@ namespace DygBot.Modules
         [Summary("Changes bot prefix")]
         public async Task PrefixAsync([Summary("New prefix")]string prefix)
         {
-            using (Context.Channel.EnterTypingState())
+            using (Context.Channel.EnterTypingState())  // Show the "typing" notification
             {
-                if (prefix == _git.Config.Servers[Context.Guild.Id.ToString()].Prefix)
+                if (prefix == _git.Config.Servers[Context.Guild.Id.ToString()].Prefix)  // Compare new prefix with old prefix
                     await ReplyAsync($"Prefix is already set to **{prefix}**");
                 else
                 {
-                    _git.Config.Servers[Context.Guild.Id.ToString()].Prefix = prefix;
-                    await _git.UploadConfig();
-                    await ReplyAsync($"Prefix set to {prefix}");
+                    _git.Config.Servers[Context.Guild.Id.ToString()].Prefix = prefix;   // Set the prefix
+                    await _git.UploadConfig();  // Upload config
+                    await ReplyAsync($"Prefix set to {prefix}");    // Reply
                 }
             }
         }
@@ -47,16 +47,16 @@ namespace DygBot.Modules
         [Summary("Adds role to list of roles that can use this bot")]
         public async Task AddManagementRoleAsync([Summary("Role")]IRole role)
         {
-            using (Context.Channel.EnterTypingState())
+            using (Context.Channel.EnterTypingState())  // Show the "typing" notification
             {
-                var roleIdString = role.Id.ToString();
-                if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Contains(roleIdString))
+                var roleIdString = role.Id.ToString();  // Get role ID
+                if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Contains(roleIdString))    // Check for information about role in config
                 {
                     await ReplyAsync("This role is already in the list");
                 }
                 else
                 {
-                    _git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Add(roleIdString);
+                    _git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Add(roleIdString); // Add role to config
                     await _git.UploadConfig();
                     await ReplyAsync("Role added to list");
                 }
@@ -89,15 +89,15 @@ namespace DygBot.Modules
         {
             using (Context.Channel.EnterTypingState())
             {
-                if (!template.Contains("%num%"))
+                if (!template.Contains("%num%"))    // Check if template contains placeholder
                 {
                     await ReplyAsync("Template doesn't contain **%num%** placeholder");
                 }
                 else
                 {
-                    var guildId = Context.Guild.Id.ToString();
-                    var channelId = channel.Id.ToString();
-                    _git.Config.Servers[guildId].CountChannels[channelId] = new GitHubService.ConfigClass.ServerConfigClass.CountChannelClass
+                    var guildId = Context.Guild.Id.ToString();  // Get server ID
+                    var channelId = channel.Id.ToString();  // Get channel ID
+                    _git.Config.Servers[guildId].CountChannels[channelId] = new GitHubService.ConfigClass.ServerConfigClass.CountChannelClass   // Create new/Update config
                     {
                         Property = property,
                         Template = template
@@ -129,7 +129,7 @@ namespace DygBot.Modules
             using (Context.Channel.EnterTypingState())
             {
                 var guildId = Context.Guild.Id.ToString();
-                _git.Config.Servers[guildId].VcTextRole[channel.Id.ToString()] = role.Id.ToString();
+                _git.Config.Servers[guildId].VcTextRole[channel.Id.ToString()] = role.Id.ToString();    // Set role ID for channel
                 await _git.UploadConfig();
                 await ReplyAsync("Role successfully bound to voice chat");
             }
@@ -142,7 +142,7 @@ namespace DygBot.Modules
             using (Context.Channel.EnterTypingState())
             {
                 var guildId = Context.Guild.Id.ToString();
-                _git.Config.Servers[guildId].VcTextRole.Remove(channel.Id.ToString());
+                _git.Config.Servers[guildId].VcTextRole.Remove(channel.Id.ToString());  // Clear channel
                 await _git.UploadConfig();
                 await ReplyAsync("Role successfully unbound from voice chat");
             }
@@ -160,19 +160,19 @@ namespace DygBot.Modules
                     IEmote emote;
                     try
                     {
-                        emote = Emote.Parse(text);
+                        emote = Emote.Parse(text);  // Try parse emote (<:dyg:708782038521741352>)
                     }
-                    catch (Exception)
+                    catch (Exception)   // If emote is not a custom server emote
                     {
-                        if (new Regex("[A-z0-9]").IsMatch(text))
+                        if (new Regex("[A-z0-9]").IsMatch(text))    // Check if text is a unicode emoji
                         {
                             await ReplyAsync($"**{text}** is not a valid emote");
                             return;
                         }
-                        emote = new Emoji(text);
+                        emote = new Emoji(text);    // Create emoji (👍)
                     }
                 }
-                _git.Config.Servers[guildId].AutoReact[channel.Id.ToString()] = emotes.ToList();
+                _git.Config.Servers[guildId].AutoReact[channel.Id.ToString()] = emotes.ToList();    // Add emotes to config
                 await _git.UploadConfig();
                 await ReplyAsync($"AutoReply on channel **{channel}** set up successfully");
             }
@@ -185,7 +185,7 @@ namespace DygBot.Modules
             using (Context.Channel.EnterTypingState())
             {
                 var guildId = Context.Guild.Id.ToString();
-                _git.Config.Servers[guildId].AutoReact.Remove(channel.Id.ToString());
+                _git.Config.Servers[guildId].AutoReact.Remove(channel.Id.ToString());   // Clear emotes
                 await _git.UploadConfig();
                 await ReplyAsync($"AutoReply on channel **{channel}** cleared successfully");
             }

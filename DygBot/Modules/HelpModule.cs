@@ -27,12 +27,12 @@ namespace DygBot.Modules
         [Alias("commands")]
         public async Task HelpAsync()
         {
-            string prefix = _git.Config.Servers[Context.Guild.Id.ToString()].Prefix;
-            var builder = new EmbedBuilder()
+            string prefix = _git.Config.Servers[Context.Guild.Id.ToString()].Prefix;    // Get prefix for server
+            var builder = new EmbedBuilder()    // Create an embed
             {
-                Color = Color.Green,
-                Title = "HELP",
-                Description = $"For more information about a command send __{prefix}help **command**__"
+                Color = Color.Green,    // Set color
+                Title = "HELP", // Set title
+                Description = $"For more information about a command send __{prefix}help **command**__" // Set description
             };
 
             foreach (var module in _service.Modules)

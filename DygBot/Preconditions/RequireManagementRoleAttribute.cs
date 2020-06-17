@@ -14,11 +14,11 @@ namespace DygBot.Preconditions
     {
         public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            var config = services.GetRequiredService<GitHubService>().Config;
-            var managementRoles = config.Servers[context.Guild.Id.ToString()].ManagementRoles;
-            if (context.User is SocketGuildUser gUser)
+            var config = services.GetRequiredService<GitHubService>().Config;   // Get config
+            var managementRoles = config.Servers[context.Guild.Id.ToString()].ManagementRoles;  // Get roles set up as management
+            if (context.User is SocketGuildUser gUser)  // Check if user is a guild member
             {
-                var userHasRole = gUser.Roles.Any(x => managementRoles.Contains(x.Id.ToString()));
+                var userHasRole = gUser.Roles.Any(x => managementRoles.Contains(x.Id.ToString()));  // Check if member has roles
                 if (userHasRole)
                     return Task.FromResult(PreconditionResult.FromSuccess());
                 else

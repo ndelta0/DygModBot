@@ -4,7 +4,6 @@ using Discord.WebSocket;
 using DygBot.TypeReaders;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using static DygBot.Services.GitHubService;
 
@@ -30,11 +29,12 @@ namespace DygBot.Services
             _provider = provider;
             _git = git;
 
-            _discord.MessageReceived += _discord_MessageReceived;   // Bind MessageReceived event
-            _discord.JoinedGuild += _discord_JoinedGuild;   // Bind JoinedGuild event
-            _discord.UserVoiceStateUpdated += _discord_UserVoiceStateUpdated;
+            _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
+            _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
+            _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
 
             _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
+            _commands.AddTypeReader(typeof(Uri), new UriTypeReader());
         }
 
         private enum VcChangeState  // Enum with states of user being in VC
@@ -45,7 +45,7 @@ namespace DygBot.Services
             Moved
         }
 
-        private async Task _discord_UserVoiceStateUpdated(SocketUser socketUser, SocketVoiceState beforeState, SocketVoiceState afterState)
+        private async Task Discord_UserVoiceStateUpdated(SocketUser socketUser, SocketVoiceState beforeState, SocketVoiceState afterState)
         {
             if (socketUser is SocketGuildUser user)
             {
@@ -113,11 +113,11 @@ namespace DygBot.Services
                             break;
                     }
                 }
-                catch (Exception) {}
+                catch (Exception) { }
             }
         }
 
-        private async Task _discord_JoinedGuild(SocketGuild arg)
+        private async Task Discord_JoinedGuild(SocketGuild arg)
         {
             var serverConfig = new ConfigClass.ServerConfigClass { Prefix = "db!" };    // Create new server config object
             var guildId = arg.Id.ToString();    // Get the guild ID
@@ -125,7 +125,7 @@ namespace DygBot.Services
             await _git.UploadConfig();  // Upload new config to GitHub
         }
 
-        private async Task _discord_MessageReceived(SocketMessage s)
+        private async Task Discord_MessageReceived(SocketMessage s)
         {
             // Ensure the message is from a user/bot
             if (!(s is SocketUserMessage msg))
@@ -167,22 +167,28 @@ namespace DygBot.Services
 
                 if (!result.IsSuccess)
                 {
+                    IMessage errMsg = null;
                     switch (result.Error)
                     {
                         case CommandError.UnknownCommand:
                             break;
 
                         case CommandError.BadArgCount:
-                            await context.Channel.SendMessageAsync("Wrong argument count");
+                            errMsg = await context.Channel.SendMessageAsync("Wrong argument count");
                             break;
 
                         case CommandError.UnmetPrecondition:
-                            await context.Channel.SendMessageAsync(result.ErrorReason);
+                            errMsg = await context.Channel.SendMessageAsync(result.ErrorReason);
                             break;
 
                         default:
-                            await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
+                            errMsg = await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
                             break;
+                    }
+                    if (errMsg != null)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+                        await errMsg.DeleteAsync();
                     }
                 }
             }

@@ -12,7 +12,7 @@ namespace DygBot.Services
     {
         private readonly HttpClient _client;
         private readonly string _gitHubApiToken = Environment.GetEnvironmentVariable("GITHUB_API_TOKEN");
-        private readonly Uri _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.json");
+        private readonly Uri _configUri;
         private string _sha;
 
         public ConfigClass Config;
@@ -21,6 +21,12 @@ namespace DygBot.Services
             HttpClient client)
         {
             _client = client;
+            var environment = Environment.GetEnvironmentVariable("ENVIRONMENT");
+            if (environment == "DEVELOPMENT")
+                _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.dev.json");
+            else
+                _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.json");
+
         }
 
         public async Task DownloadConfig()

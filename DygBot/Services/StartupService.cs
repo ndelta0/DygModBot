@@ -4,11 +4,9 @@ using Discord.WebSocket;
 using Quartz;
 using Quartz.Impl;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DygBot.Services
@@ -46,11 +44,12 @@ namespace DygBot.Services
             {
                 await _discord.LoginAsync(Discord.TokenType.Bot, discordToken); // Login to Discord
                 await _discord.StartAsync();    // Connect to the websocket
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 await _logging.OnLogAsync(new Discord.LogMessage(Discord.LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
             }
-            
+
             var props = new NameValueCollection
             {
                 {"quartz.serializer.type", "binary" }
@@ -116,7 +115,7 @@ namespace DygBot.Services
                 var logging = (LoggingService)dataMap["Logging"];
 
                 await logging.OnLogAsync(new Discord.LogMessage(Discord.LogSeverity.Info, "Quartz", "Updating counters"));  // Log
-                
+
                 foreach (var kvp in git.Config.Servers)
                 {
                     if (!client.Guilds.Any(x => x.Id.ToString() == kvp.Key))    // If bot is not in server

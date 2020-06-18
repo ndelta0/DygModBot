@@ -1,10 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using DygBot.Services;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DygBot.Modules
@@ -37,7 +34,7 @@ namespace DygBot.Modules
 
             foreach (var module in _service.Modules)
             {
-                string description = "";
+                string description = module.IsSubmodule ? "\t" : string.Empty;
                 foreach (var cmd in module.Commands)
                 {
                     description += $"{prefix}{cmd.Aliases.First()}";
@@ -66,9 +63,10 @@ namespace DygBot.Modules
 
                 if (!string.IsNullOrWhiteSpace(description))
                 {
+                    var name = module.IsSubmodule ? "\t" : string.Empty;
                     builder.AddField(x =>
                     {
-                        x.Name = module.Summary;
+                        x.Name = name + (module.Summary ?? module.Group);
                         x.Value = description;
                         x.IsInline = false;
                     });

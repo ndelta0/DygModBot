@@ -1,12 +1,11 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using DygBot.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DygBot
@@ -48,7 +47,8 @@ namespace DygBot
                 .AddSingleton<CommandHandler>() // Add the command handler to the collection
                 .AddSingleton<StartupService>() // Add the startup service to the collection
                 .AddSingleton<LoggingService>() // Add the logging service to the collection
-                .AddSingleton<Random>();     // Add random to the collection
+                .AddSingleton<Random>()      // Add random to the collection
+                .AddSingleton<InteractiveService>();
         }
     }
 }

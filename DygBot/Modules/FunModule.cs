@@ -29,7 +29,7 @@ namespace DygBot.Modules
 
         [Command("versus")]
         [Summary("Puts two images side to side to vote for one")]
-        public async Task VersusUri([Summary("Address of first image")]Uri image1, [Summary("Address of second image")] Uri image2)
+        public async Task VersusUri([Summary("Opis do zdjęcia")]string description, [Summary("Address of first image")]Uri image1, [Summary("Address of second image")] Uri image2)
         {
             using (Context.Channel.EnterTypingState())
             {
@@ -70,7 +70,7 @@ namespace DygBot.Modules
 
                     finalImg.Save("a_or_b.png", new PngEncoder());
 
-                    var message = await Context.Channel.SendFileAsync("a_or_b.png");
+                    var message = await Context.Channel.SendFileAsync("a_or_b.png", description);
                     await message.AddReactionsAsync(new IEmote[] { new Emoji("🅰️"), new Emoji("🅱️") });
 
                     await Context.Message.DeleteAsync();
@@ -88,7 +88,7 @@ namespace DygBot.Modules
 
         [Command("versus")]
         [Summary("Puts two images side to side to vote for one")]
-        public async Task VersusImg()
+        public async Task VersusImg([Summary("Opis do zdjęcia")] string description)
         {
             using (Context.Channel.EnterTypingState())
             {
@@ -178,7 +178,7 @@ namespace DygBot.Modules
 
                 finalImg.Save("a_or_b.png", new PngEncoder());
 
-                var message = await Context.Channel.SendFileAsync("a_or_b.png");
+                var message = await Context.Channel.SendFileAsync("a_or_b.png", description);
                 await message.AddReactionsAsync(new IEmote[] { new Emoji("🅰️"), new Emoji("🅱️") });
             }
         }

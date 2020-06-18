@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 
 namespace DygBot.Modules
 {
+    [Summary("Commands made to be used by members")]
     public class FunModule : InteractiveBase<SocketCommandContext>
     {
         private readonly GitHubService _git;
@@ -27,7 +28,8 @@ namespace DygBot.Modules
         }
 
         [Command("versus")]
-        public async Task VersusUri(Uri image1, Uri image2)
+        [Summary("Puts two images side to side to vote for one")]
+        public async Task VersusUri([Summary("Address of first image")]Uri image1, [Summary("Address of second image")] Uri image2)
         {
             using (Context.Channel.EnterTypingState())
             {
@@ -85,6 +87,7 @@ namespace DygBot.Modules
         }
 
         [Command("versus")]
+        [Summary("Puts two images side to side to vote for one")]
         public async Task VersusImg()
         {
             using (Context.Channel.EnterTypingState())

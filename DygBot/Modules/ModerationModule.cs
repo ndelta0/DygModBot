@@ -1,8 +1,10 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using DygBot.Preconditions;
 using DygBot.Services;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,13 +18,15 @@ namespace DygBot.Modules
     [RequireUserPermission(GuildPermission.Administrator, Group = "Permission")]
     [RequireManagementRole(Group = "Permission")]
     [Group("mod")]
-    public class ModerationModule : ModuleBase<SocketCommandContext>
+    public class ModerationModule : InteractiveBase<SocketCommandContext>
     {
         private readonly GitHubService _git;
+        private readonly InteractiveService _interactive;
 
-        public ModerationModule(GitHubService git)
+        public ModerationModule(GitHubService git, InteractiveService interactive)
         {
             _git = git;
+            _interactive = interactive;
         }
 
         [Command("prefix")]
@@ -43,13 +47,15 @@ namespace DygBot.Modules
         }
 
         [Group("managementRole")]
-        public class ManagementRoleModule : ModuleBase<SocketCommandContext>
+        public class ManagementRoleModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
+            private readonly InteractiveService _interactive;
 
-            public ManagementRoleModule(GitHubService git)
+            public ManagementRoleModule(GitHubService git, InteractiveService interactive)
             {
                 _git = git;
+                _interactive = interactive;
             }
 
 
@@ -96,13 +102,15 @@ namespace DygBot.Modules
         }
 
         [Group("countChannel")]
-        public class CountChannelModule : ModuleBase<SocketCommandContext>
+        public class CountChannelModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
+            private readonly InteractiveService _interactive;
 
-            public CountChannelModule(GitHubService git)
+            public CountChannelModule(GitHubService git, InteractiveService interactive)
             {
                 _git = git;
+                _interactive = interactive;
             }
 
             [Command("set")]
@@ -146,13 +154,15 @@ namespace DygBot.Modules
         }
 
         [Group("vcTextRole")]
-        public class VcTextRoleModule : ModuleBase<SocketCommandContext>
+        public class VcTextRoleModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
+            private readonly InteractiveService _interactive;
 
-            public VcTextRoleModule(GitHubService git)
+            public VcTextRoleModule(GitHubService git, InteractiveService interactive)
             {
                 _git = git;
+                _interactive = interactive;
             }
 
             [Command("set")]
@@ -183,13 +193,15 @@ namespace DygBot.Modules
         }
 
         [Group("autoreact")]
-        public class AutoreactModule : ModuleBase<SocketCommandContext>
+        public class AutoreactModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
+            private readonly InteractiveService _interactive;
 
-            public AutoreactModule(GitHubService git)
+            public AutoreactModule(GitHubService git, InteractiveService interactive)
             {
                 _git = git;
+                _interactive = interactive;
             }
 
             [Command("set")]
@@ -232,6 +244,113 @@ namespace DygBot.Modules
                     _git.Config.Servers[guildId].AutoReact.Remove(channel.Id.ToString());   // Clear emotes
                     await _git.UploadConfig();
                     await ReplyAsync($"AutoReply on channel **{channel}** cleared successfully");
+                }
+            }
+        }
+
+        [Group("commandLimit")]
+        public class CommandLimitModule : InteractiveBase<SocketCommandContext>
+        {
+            private readonly GitHubService _git;
+            private readonly InteractiveService _interactive;
+            private readonly CommandService _service;
+
+            public CommandLimitModule(GitHubService git, CommandService service, InteractiveService interactive)
+            {
+                _git = git;
+                _service = service;
+                _interactive = interactive;
+            }
+
+            [Command("add")]
+            [Summary("Adds a channel where a command can be used in")]
+            public async Task AddCommandLimitAsync([Summary("Channel")]ITextChannel channel, [Summary("Command")][Remainder]string command)
+            {
+                using (Context.Channel.EnterTypingState())
+                {
+                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    {
+                        await ReplyAsync($"No command has alias of {command}");
+                    }
+                    else
+                    {
+                        command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
+                        if (_git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit.ContainsKey(command))
+                        {
+                            if (_git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit[command].Contains(channel.Id.ToString()))
+                            {
+                                await ReplyAsync("Command already limited to that channel");
+                            }
+                            else
+                            {
+                                _git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit[command].Add(channel.Id.ToString());
+                                await _git.UploadConfig();
+                                await ReplyAsync($"Command **{command}** limited to channel {channel.Mention}");
+                            }
+                        }
+                        else
+                        {
+                            _git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit[command] = new List<string> { channel.Id.ToString() };
+                            await _git.UploadConfig();
+                            await ReplyAsync($"Command **{command}** limited to channel {channel.Mention}");
+                        }
+                    }
+                }
+            }
+
+            [Command("remove")]
+            [Summary("Removes a channel where a command can be used in")]
+            public async Task RemoveCommandLimitAsync([Summary("Channel")] ITextChannel channel, [Summary("Command")][Remainder] string command)
+            {
+                using (Context.Channel.EnterTypingState())
+                {
+                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    {
+                        await ReplyAsync($"No command has alias of {command}");
+                    }
+                    else
+                    {
+                        command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
+                        if (_git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit.ContainsKey(command))
+                        {
+                            _git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit.Remove(command);
+                            await _git.UploadConfig();
+                            await ReplyAsync($"Command **{command}** removed from channel {channel.Mention}");
+                        }
+                        else
+                        {
+                            await ReplyAsync("Command was not limited to that channel");
+                        }
+                    }
+                }
+            }
+
+            [Command("show")]
+            [Summary("Shows what channels command can be used in")]
+            public async Task ShowCommandLimitAsync([Summary("Command")][Remainder] string command)
+            {
+                using (Context.Channel.EnterTypingState())
+                {
+                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    {
+                        await ReplyAsync($"No command has alias of {command}");
+                    }
+                    else
+                    {
+                        string message = "Channels where command can be used:\n";
+                        if (_git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit.ContainsKey(command))
+                        {
+                            foreach (var channelId in _git.Config.Servers[Context.Guild.Id.ToString()].CommandLimit[command])
+                            {
+                                message += $"<#{channelId}>\n";
+                            }
+                        }
+                        else
+                        {
+                            message += "All channels (no limits)";
+                        }
+                        await ReplyAsync(message);
+                    }
                 }
             }
         }

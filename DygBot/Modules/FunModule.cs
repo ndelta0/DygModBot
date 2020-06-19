@@ -2,8 +2,9 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using DygBot.Services;
+using Newtonsoft.Json;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
@@ -46,35 +47,36 @@ namespace DygBot.Modules
                         img1.Mutate(x => x.Resize(smallerHeight / img1.Height * img1.Width, smallerHeight));
                         img2.Mutate(x => x.Resize(smallerHeight / img2.Height * img2.Width, smallerHeight));
 
-                        using var finalImg = new Image<Rgba32>(img1.Width + img2.Width + 10, smallerHeight);
-
-                        for (int y = 0; y < img1.Height; y++)
+                        using (var finalImg = new Image<Rgba32>(img1.Width + img2.Width + 10, smallerHeight))
                         {
-                            for (int x = 0; x < img1.Width; x++)
+                            for (int y = 0; y < img1.Height; y++)
                             {
-                                finalImg[x, y] = img1[x, y];
+                                for (int x = 0; x < img1.Width; x++)
+                                {
+                                    finalImg[x, y] = img1[x, y];
+                                }
                             }
+
+                            for (int y = 0; y < finalImg.Height; y++)
+                            {
+                                for (int x = 0; x < 10; x++)
+                                {
+                                    finalImg[x + img1.Width, y] = new Rgba32(255, 0, 0);
+                                }
+                            }
+
+                            for (int y = 0; y < img2.Height; y++)
+                            {
+                                for (int x = 0; x < img2.Width; x++)
+                                {
+                                    finalImg[x + img1.Width + 10, y] = img2[x, y];
+                                }
+                            }
+
+                            finalImg.Save("a_or_b.jpg", new JpegEncoder());
                         }
 
-                        for (int y = 0; y < finalImg.Height; y++)
-                        {
-                            for (int x = 0; x < 10; x++)
-                            {
-                                finalImg[x + img1.Width, y] = new Rgba32(255, 0, 0);
-                            }
-                        }
-
-                        for (int y = 0; y < img2.Height; y++)
-                        {
-                            for (int x = 0; x < img2.Width; x++)
-                            {
-                                finalImg[x + img1.Width + 10, y] = img2[x, y];
-                            }
-                        }
-
-                        finalImg.Save("a_or_b.png", new PngEncoder());
-
-                        var message = await Context.Channel.SendFileAsync("a_or_b.png", description + $" (wysłane przez {Context.User})");
+                        var message = await Context.Channel.SendFileAsync("a_or_b.jpg", description + $" (wysłane przez {Context.User})");
                         await message.AddReactionsAsync(new IEmote[] { new Emoji("🅰️"), new Emoji("🅱️") });
 
                         await Context.Message.DeleteAsync();
@@ -162,36 +164,37 @@ namespace DygBot.Modules
                     int smallerHeight = Math.Min(img1.Height, img2.Height);
                     img1.Mutate(x => x.Resize(smallerHeight / img1.Height * img1.Width, smallerHeight));
                     img2.Mutate(x => x.Resize(smallerHeight / img2.Height * img2.Width, smallerHeight));
-
-                    using var finalImg = new Image<Rgba32>(img1.Width + img2.Width + 10, smallerHeight);
-
-                    for (int y = 0; y < img1.Height; y++)
+                    int separatorWidth = (int)((img1.Width + img2.Width) * 0.01);
+                    using (var finalImg = new Image<Rgba32>(img1.Width + img2.Width + separatorWidth, smallerHeight))
                     {
-                        for (int x = 0; x < img1.Width; x++)
+                        for (int y = 0; y < img1.Height; y++)
                         {
-                            finalImg[x, y] = img1[x, y];
+                            for (int x = 0; x < img1.Width; x++)
+                            {
+                                finalImg[x, y] = img1[x, y];
+                            }
                         }
+
+                        for (int y = 0; y < finalImg.Height; y++)
+                        {
+                            for (int x = 0; x < separatorWidth; x++)
+                            {
+                                finalImg[x + img1.Width, y] = new Rgba32(255, 0, 0);
+                            }
+                        }
+
+                        for (int y = 0; y < img2.Height; y++)
+                        {
+                            for (int x = 0; x < img2.Width; x++)
+                            {
+                                finalImg[x + img1.Width + separatorWidth, y] = img2[x, y];
+                            }
+                        }
+
+                        finalImg.Save("a_or_b.jpg", new JpegEncoder());
                     }
 
-                    for (int y = 0; y < finalImg.Height; y++)
-                    {
-                        for (int x = 0; x < 10; x++)
-                        {
-                            finalImg[x + img1.Width, y] = new Rgba32(255, 0, 0);
-                        }
-                    }
-
-                    for (int y = 0; y < img2.Height; y++)
-                    {
-                        for (int x = 0; x < img2.Width; x++)
-                        {
-                            finalImg[x + img1.Width + 10, y] = img2[x, y];
-                        }
-                    }
-
-                    finalImg.Save("a_or_b.png", new PngEncoder());
-
-                    var message = await Context.Channel.SendFileAsync("a_or_b.png", description + $" (wysłane przez {Context.User})");
+                    var message = await Context.Channel.SendFileAsync("a_or_b.jpg", description + $" (wysłane przez {Context.User})");
                     await message.AddReactionsAsync(new IEmote[] { new Emoji("🅰️"), new Emoji("🅱️") });
                 }
                 catch (Exception ex)
@@ -200,6 +203,8 @@ namespace DygBot.Modules
                     await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", ex.Message, ex));
                     await msg1.DeleteAsync();
                 }
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                var json = JsonConvert.SerializeObject(culture);
             }
         }
 

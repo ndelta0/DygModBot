@@ -103,6 +103,7 @@ namespace DygBot.Services
                 public Dictionary<string, List<string>> AutoReact { get; set; } = new Dictionary<string, List<string>>();
                 public Dictionary<string, CountChannelClass> CountChannels { get; set; } = new Dictionary<string, CountChannelClass>();
                 public Dictionary<string, string> VcTextRole { get; set; } = new Dictionary<string, string>();
+                public Dictionary<string, List<string>> CommandLimit { get; set; } = new Dictionary<string, List<string>>();
             }
             public string DiscordToken { get; set; }
             public Dictionary<string, ServerConfigClass> Servers { get; set; }

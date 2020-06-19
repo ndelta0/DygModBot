@@ -2,9 +2,9 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using DygBot.Services;
+using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
@@ -203,6 +203,8 @@ namespace DygBot.Modules
                     await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", ex.Message, ex));
                     await msg1.DeleteAsync();
                 }
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                var json = JsonConvert.SerializeObject(culture);
             }
         }
 

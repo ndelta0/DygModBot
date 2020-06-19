@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using DygBot.TypeReaders;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using static DygBot.Services.GitHubService;
 
@@ -163,32 +164,57 @@ namespace DygBot.Services
             int argPos = 0;     // Check if the message has a valid command prefix
             if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
             {
-                var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
-
-                if (!result.IsSuccess)
+                bool executeCommand = false;
+                var command = msg.Content.Split(' ')[0].Substring(argPos);
+                if (command != "mod")
                 {
-                    IMessage errMsg = null;
-                    switch (result.Error)
+                    command = _commands.Commands.First(x => x.Aliases.Contains(command)).Name;
+                    if (_git.Config.Servers[guildId].CommandLimit.ContainsKey(command))
                     {
-                        case CommandError.UnknownCommand:
-                            break;
-
-                        case CommandError.BadArgCount:
-                            errMsg = await context.Channel.SendMessageAsync("Wrong argument count");
-                            break;
-
-                        case CommandError.UnmetPrecondition:
-                            errMsg = await context.Channel.SendMessageAsync(result.ErrorReason);
-                            break;
-
-                        default:
-                            errMsg = await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
-                            break;
+                        if (_git.Config.Servers[guildId].CommandLimit[command].Contains(context.Channel.Id.ToString()))
+                        {
+                            executeCommand = true;
+                        }
+                        else
+                            executeCommand = false;
                     }
-                    if (errMsg != null)
+                    else
+                        executeCommand = true;
+                }
+                else
+                    executeCommand = true;
+
+
+                if (executeCommand)
+                {
+                    var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
+
+                    if (!result.IsSuccess)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(3));
-                        await errMsg.DeleteAsync();
+                        await context.Message.DeleteAsync();
+                        IMessage errMsg = null;
+                        switch (result.Error)
+                        {
+                            case CommandError.UnknownCommand:
+                                break;
+
+                            case CommandError.BadArgCount:
+                                errMsg = await context.Channel.SendMessageAsync("Wrong argument count");
+                                break;
+
+                            case CommandError.UnmetPrecondition:
+                                errMsg = await context.Channel.SendMessageAsync(result.ErrorReason);
+                                break;
+
+                            default:
+                                errMsg = await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
+                                break;
+                        }
+                        if (errMsg != null)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(3));
+                            await errMsg.DeleteAsync();
+                        }
                     }
                 }
             }

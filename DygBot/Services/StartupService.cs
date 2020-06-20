@@ -102,7 +102,7 @@ namespace DygBot.Services
                 .WithIdentity("hourlyStatsTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 0/1 1/1 * ? *")
+                .WithCronSchedule("0 0/15 * 1/1 * ? *")
                 .StartNow()
                 .Build();
 

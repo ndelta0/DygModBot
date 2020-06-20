@@ -1,9 +1,11 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DygBot.Models;
 using Quartz;
 using Quartz.Impl;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
@@ -18,22 +20,28 @@ namespace DygBot.Services
         private readonly CommandService _commands;
         private readonly GitHubService _gitHub;
         private readonly LoggingService _logging;
+        private readonly AppDbContext _dbContext;
+        private readonly IScheduler _scheduler;
 
         public StartupService(
             IServiceProvider provider,
             DiscordSocketClient discord,
             CommandService commands,
             GitHubService gitHub,
-            LoggingService logging)
+            LoggingService logging,
+            AppDbContext dbContext,
+            IScheduler scheduler)
         {
             _provider = provider;
             _discord = discord;
             _commands = commands;
             _gitHub = gitHub;
             _logging = logging;
+            _dbContext = dbContext;
+            _scheduler = scheduler;
         }
 
-        public async Task<IScheduler> StartAsync()
+        public async Task StartAsync()
         {
             await _gitHub.DownloadConfig();
             var discordToken = _gitHub.Config.DiscordToken; // Get Discord token
@@ -42,28 +50,21 @@ namespace DygBot.Services
 
             try
             {
-                await _discord.LoginAsync(Discord.TokenType.Bot, discordToken); // Login to Discord
+                await _discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
                 await _discord.StartAsync();    // Connect to the websocket
             }
             catch (Exception e)
             {
-                await _logging.OnLogAsync(new Discord.LogMessage(Discord.LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
+                await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
             }
-
-            var props = new NameValueCollection
-            {
-                {"quartz.serializer.type", "binary" }
-            };
-            var factory = new StdSchedulerFactory(props);
-            IScheduler scheduler = await factory.GetScheduler();
-            await scheduler.Start();
 
             // Create datamap with required objects
             var defaultJobDataMap = new JobDataMap()
             {
                 {"Client", _discord },
                 {"GitHub", _gitHub },
-                {"Logging", _logging }
+                {"Logging", _logging },
+                {"DbContext", _dbContext }
             };
 
             // Create job for updating counters
@@ -93,16 +94,25 @@ namespace DygBot.Services
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(1).WithRepeatCount(0))
                 .Build();
 
+            IJobDetail hourlyStatsJob = JobBuilder.Create<HourlyStatsJob>()
+                .WithIdentity("hourlyStatsJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger hourlyStatsTrigger = TriggerBuilder.Create()
+                .WithIdentity("hourlyStatsTrigger", "discordGroup")
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                .WithCronSchedule("0 0 0/1 1/1 * ? *")
+                .StartNow()
+                .Build();
+
             // Schedule jobs
-            await scheduler.ScheduleJob(countersJob, countersTrigger);
-            await scheduler.ScheduleJob(clearJob, clearTrigger);
+            await _scheduler.ScheduleJob(countersJob, countersTrigger);
+            await _scheduler.ScheduleJob(clearJob, clearTrigger);
+            await _scheduler.ScheduleJob(hourlyStatsJob, hourlyStatsTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
-
-            return scheduler;
         }
-
-
 
         public class UpdateCountersJob : IJob
         {
@@ -183,6 +193,42 @@ namespace DygBot.Services
                     } while (hasMessages);  // Delete until all messages are deleted or are older than 14 days
                     await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", $"Cleared {messagesCleared} messages in {channel.Name}"));  // Log number of deleted messages
                 }
+            }
+        }
+        public class HourlyStatsJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+                var dbContext = (AppDbContext)dataMap["DbContext"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating hourly statistics"));
+
+                var todayWithHour = DateTime.Today.AddHours(DateTime.UtcNow.Hour);
+
+                var additions = new List<HourlyStat>(client.Guilds.Count);
+
+                foreach (var guild in client.Guilds)
+                {
+                    if (!guild.HasAllMembers)
+                    {
+                        await guild.DownloadUsersAsync();
+                    }
+                    var stats = new HourlyStat
+                    {
+                        GuildId = guild.Id,
+                        DateTime = todayWithHour,
+                        Members = guild.MemberCount,
+                        Online = guild.Users.Count(x => x.Status != UserStatus.Offline),
+                        Bans = (await guild.GetBansAsync()).Count
+                    };
+                    additions.Add(stats);
+                }
+                await dbContext.HourlyStats.AddRangeAsync(additions);
+                await dbContext.SaveChangesAsync();
             }
         }
     }

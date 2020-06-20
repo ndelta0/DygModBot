@@ -1,7 +1,9 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using DygBot.Models;
 using DygBot.TypeReaders;
+using Quartz;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,19 +18,28 @@ namespace DygBot.Services
         private readonly CommandService _commands;
         private readonly IServiceProvider _provider;
         private readonly GitHubService _git;
+        private readonly AppDbContext _dbContext;
+        private readonly IScheduler _scheduler;
+        private readonly LoggingService _logging;
 
-        // DiscordSocketClient, CommandService, IConfigurationRoot, and IServiceProvider are
-        // injected automatically from the IServiceProvider
+        private readonly Dictionary<ulong, List<ulong>> _guildUniqueSenders = new Dictionary<ulong, List<ulong>>();
+
         public CommandHandler(
             DiscordSocketClient discord,
             CommandService commands,
             IServiceProvider provider,
-            GitHubService git)
+            GitHubService git,
+            AppDbContext dbContext,
+            IScheduler scheduler,
+            LoggingService logging)
         {
             _discord = discord;
             _commands = commands;
             _provider = provider;
             _git = git;
+            _dbContext = dbContext;
+            _scheduler = scheduler;
+            _logging = logging;
 
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
@@ -36,6 +47,29 @@ namespace DygBot.Services
 
             _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
             _commands.AddTypeReader(typeof(Uri), new UriTypeReader());
+
+            var defaultJobDataMap = new JobDataMap()
+            {
+                {"Client", _discord },
+                {"GitHub", _git },
+                {"Logging", _logging },
+                {"DbContext", _dbContext },
+                { "UniqueSendersDict", _guildUniqueSenders }
+            };
+
+            IJobDetail dailyStatsJob = JobBuilder.Create<DailyStatsJob>()
+                .WithIdentity("dailyStatsJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger dailyStatsTrigger = TriggerBuilder.Create()
+                .WithIdentity("dailyStatsTrigger", "discordGroup")
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(1))
+                .WithCronSchedule("0 1 0 ? * MON,TUE,WED,THU,FRI,SAT,SUN *")
+                .StartNow()
+                .Build();
+
+            _scheduler.ScheduleJob(dailyStatsJob, dailyStatsTrigger).Wait();
         }
 
         private enum VcChangeState  // Enum with states of user being in VC
@@ -135,12 +169,22 @@ namespace DygBot.Services
                 return;     // Ignore self when checking commands
 
             var context = new SocketCommandContext(_discord, msg);     // Create the command context
+            var guildId = context.Guild.Id;
+            var guildIdString = context.Guild.Id.ToString();  // Get guild ID
 
-            var guildId = context.Guild.Id.ToString();  // Get guild ID
-
-            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
+            if (_guildUniqueSenders.ContainsKey(guildId))
             {
-                var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id.ToString()];   // Get strings of emotes
+                if (!_guildUniqueSenders[guildId].Contains(context.User.Id))
+                {
+                    _guildUniqueSenders[guildId].Add(context.User.Id);
+                }
+            }
+            else
+                _guildUniqueSenders[guildId] = new List<ulong> { context.User.Id };
+
+            if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
+            {
+                var emotesString = _git.Config.Servers[guildIdString].AutoReact[context.Channel.Id.ToString()];   // Get strings of emotes
                 List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
 
                 // Parse emotes
@@ -159,7 +203,7 @@ namespace DygBot.Services
                 }
                 await msg.AddReactionsAsync(emotes.ToArray());  // React with emotes
             }
-            string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
+            string prefix = _git.Config.Servers[guildIdString]?.Prefix ?? "db!";
 
             int argPos = 0;     // Check if the message has a valid command prefix
             if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
@@ -169,9 +213,9 @@ namespace DygBot.Services
                 if (command != "mod")
                 {
                     command = _commands.Commands.First(x => x.Aliases.Contains(command)).Name;
-                    if (_git.Config.Servers[guildId].CommandLimit.ContainsKey(command))
+                    if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(command))
                     {
-                        if (_git.Config.Servers[guildId].CommandLimit[command].Contains(context.Channel.Id.ToString()))
+                        if (_git.Config.Servers[guildIdString].CommandLimit[command].Contains(context.Channel.Id.ToString()))
                         {
                             executeCommand = true;
                         }
@@ -217,6 +261,38 @@ namespace DygBot.Services
                         }
                     }
                 }
+            }
+        }
+
+        public class DailyStatsJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+                var dbContext = (AppDbContext)dataMap["DbContext"];
+                var uniqueSenders = (Dictionary<ulong, List<ulong>>)dataMap["UniqueSendersDict"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating daily statistics"));
+
+                var today = DateTime.Today.AddDays(-1);
+
+                var additions = new List<DailyStat>(client.Guilds.Count);
+
+                foreach (var guild in client.Guilds)
+                {
+                    var stats = new DailyStat
+                    {
+                        DateTime = today,
+                        UniqueSenders = uniqueSenders.ContainsKey(guild.Id) ? uniqueSenders[guild.Id].Count : 0
+                    };
+                    additions.Add(stats);
+                }
+                await dbContext.DailyStats.AddRangeAsync(additions);
+                await dbContext.SaveChangesAsync();
+                uniqueSenders.Clear();
             }
         }
     }

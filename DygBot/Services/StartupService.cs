@@ -94,22 +94,22 @@ namespace DygBot.Services
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(1).WithRepeatCount(0))
                 .Build();
 
-            IJobDetail hourlyStatsJob = JobBuilder.Create<HourlyStatsJob>()
-                .WithIdentity("hourlyStatsJob", "discordGroup")
+            IJobDetail detailStatsJob = JobBuilder.Create<DetailStatsJob>()
+                .WithIdentity("detailStatsJob", "discordGroup")
                 .UsingJobData(defaultJobDataMap)
                 .Build();
-            ITrigger hourlyStatsTrigger = TriggerBuilder.Create()
-                .WithIdentity("hourlyStatsTrigger", "discordGroup")
+            ITrigger detailStatsTrigger = TriggerBuilder.Create()
+                .WithIdentity("detailStatsTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0/15 * 1/1 * ? *")
+                .WithCronSchedule("0 0/5 * 1/1 * ? *")
                 .StartNow()
                 .Build();
 
             // Schedule jobs
-            await _scheduler.ScheduleJob(countersJob, countersTrigger);
-            await _scheduler.ScheduleJob(clearJob, clearTrigger);
-            await _scheduler.ScheduleJob(hourlyStatsJob, hourlyStatsTrigger);
+            //await _scheduler.ScheduleJob(countersJob, countersTrigger);
+            //await _scheduler.ScheduleJob(clearJob, clearTrigger);
+            await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
         }
@@ -195,7 +195,7 @@ namespace DygBot.Services
                 }
             }
         }
-        public class HourlyStatsJob : IJob
+        public class DetailStatsJob : IJob
         {
             public async Task Execute(IJobExecutionContext context)
             {
@@ -205,30 +205,37 @@ namespace DygBot.Services
                 var logging = (LoggingService)dataMap["Logging"];
                 var dbContext = (AppDbContext)dataMap["DbContext"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating hourly statistics"));
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating detail statistics"));
 
-                var todayWithHour = DateTime.Today.AddHours(DateTime.UtcNow.Hour);
-
-                var additions = new List<HourlyStat>(client.Guilds.Count);
-
-                foreach (var guild in client.Guilds)
+                try
                 {
-                    if (!guild.HasAllMembers)
+                    var todayWithTime = DateTime.Today.AddHours(DateTime.UtcNow.Hour).AddMinutes(DateTime.UtcNow.Minute);
+
+                    var additions = new List<DetailStat>(client.Guilds.Count);
+
+                    foreach (var guild in client.Guilds)
                     {
-                        await guild.DownloadUsersAsync();
+                        if (!guild.HasAllMembers)
+                        {
+                            await guild.DownloadUsersAsync();
+                        }
+                        var stats = new DetailStat
+                        {
+                            GuildId = guild.Id,
+                            DateTime = todayWithTime,
+                            Members = guild.MemberCount,
+                            Online = guild.Users.Count(x => x.Status != UserStatus.Offline),
+                            Bans = (await guild.GetBansAsync()).Count
+                        };
+                        additions.Add(stats);
                     }
-                    var stats = new HourlyStat
-                    {
-                        GuildId = guild.Id,
-                        DateTime = todayWithHour,
-                        Members = guild.MemberCount,
-                        Online = guild.Users.Count(x => x.Status != UserStatus.Offline),
-                        Bans = (await guild.GetBansAsync()).Count
-                    };
-                    additions.Add(stats);
+                    await dbContext.DetailStat.AddRangeAsync(additions);
+                    await dbContext.SaveChangesAsync();
                 }
-                await dbContext.HourlyStats.AddRangeAsync(additions);
-                await dbContext.SaveChangesAsync();
+                catch (Exception ex)
+                {
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Detail statistics error", ex));
+                }
             }
         }
     }

@@ -8,8 +8,8 @@ namespace DygBot.Services
 {
     public class AppDbContext : DbContext
     {
-        public DbSet<HourlyStat> HourlyStats { get; set; }
-        public DbSet<DailyStat> DailyStats { get; set; }
+        public DbSet<DetailStat> DetailStat { get; set; }
+        public DbSet<GeneralStat> GeneralStats { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {

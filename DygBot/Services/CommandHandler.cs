@@ -57,19 +57,19 @@ namespace DygBot.Services
                 { "UniqueSendersDict", _guildUniqueSenders }
             };
 
-            IJobDetail dailyStatsJob = JobBuilder.Create<DailyStatsJob>()
-                .WithIdentity("dailyStatsJob", "discordGroup")
+            IJobDetail generalStatsJob = JobBuilder.Create<GeneralStatsJob>()
+                .WithIdentity("generalStatsJob", "discordGroup")
                 .UsingJobData(defaultJobDataMap)
                 .Build();
-            ITrigger dailyStatsTrigger = TriggerBuilder.Create()
-                .WithIdentity("dailyStatsTrigger", "discordGroup")
+            ITrigger generalStatsTrigger = TriggerBuilder.Create()
+                .WithIdentity("generalStatsTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(1))
                 .WithCronSchedule("0 1 0 ? * MON,TUE,WED,THU,FRI,SAT,SUN *")
                 .StartNow()
                 .Build();
 
-            _scheduler.ScheduleJob(dailyStatsJob, dailyStatsTrigger).Wait();
+            _scheduler.ScheduleJob(generalStatsJob, generalStatsTrigger).Wait();
         }
 
         private enum VcChangeState  // Enum with states of user being in VC
@@ -264,7 +264,7 @@ namespace DygBot.Services
             }
         }
 
-        public class DailyStatsJob : IJob
+        public class GeneralStatsJob : IJob
         {
             public async Task Execute(IJobExecutionContext context)
             {
@@ -275,24 +275,34 @@ namespace DygBot.Services
                 var dbContext = (AppDbContext)dataMap["DbContext"];
                 var uniqueSenders = (Dictionary<ulong, List<ulong>>)dataMap["UniqueSendersDict"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating daily statistics"));
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating general statistics"));
 
-                var today = DateTime.Today.AddDays(-1);
-
-                var additions = new List<DailyStat>(client.Guilds.Count);
-
-                foreach (var guild in client.Guilds)
+                try
                 {
-                    var stats = new DailyStat
+                    var today = DateTime.Today.AddDays(-1);
+
+                    var additions = new List<GeneralStat>(client.Guilds.Count);
+
+                    foreach (var guild in client.Guilds)
                     {
-                        DateTime = today,
-                        UniqueSenders = uniqueSenders.ContainsKey(guild.Id) ? uniqueSenders[guild.Id].Count : 0
-                    };
-                    additions.Add(stats);
+                        var stats = new GeneralStat
+                        {
+                            DateTime = today,
+                            UniqueSenders = uniqueSenders.ContainsKey(guild.Id) ? uniqueSenders[guild.Id].Count : 0
+                        };
+                        additions.Add(stats);
+                    }
+                    await dbContext.GeneralStats.AddRangeAsync(additions);
+                    await dbContext.SaveChangesAsync();
                 }
-                await dbContext.DailyStats.AddRangeAsync(additions);
-                await dbContext.SaveChangesAsync();
-                uniqueSenders.Clear();
+                catch (Exception ex)
+                {
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "General statistics error", ex));
+                }
+                finally
+                {
+                    uniqueSenders.Clear();
+                }
             }
         }
     }

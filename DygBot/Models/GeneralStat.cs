@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DygBot.Models
 {
-    public class DailyStat
+    public class GeneralStat
     {
         [Key]
         public int Id { get; set; }

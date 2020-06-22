@@ -107,8 +107,8 @@ namespace DygBot.Services
                 .Build();
 
             // Schedule jobs
-            //await _scheduler.ScheduleJob(countersJob, countersTrigger);
-            //await _scheduler.ScheduleJob(clearJob, clearTrigger);
+            await _scheduler.ScheduleJob(countersJob, countersTrigger);
+            await _scheduler.ScheduleJob(clearJob, clearTrigger);
             await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service

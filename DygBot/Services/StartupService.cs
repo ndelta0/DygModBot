@@ -106,10 +106,36 @@ namespace DygBot.Services
                 .StartNow()
                 .Build();
 
+            IJobDetail lockdownBeginJob = JobBuilder.Create<LockdownBeginJob>()
+                .WithIdentity("lockdownBeginJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger lockdownBeginTrigger = TriggerBuilder.Create()
+                .WithIdentity("lockdownBeginTrigger", "discordGroup")
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                .WithCronSchedule("0 0 3 1/1 * ? *")
+                .StartNow()
+                .Build();
+
+            IJobDetail lockdownEndJob = JobBuilder.Create<LockdownEndJob>()
+                .WithIdentity("lockdownEndJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger lockdownEndTrigger = TriggerBuilder.Create()
+                .WithIdentity("lockdownEndTrigger", "discordGroup")
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                .WithCronSchedule("0 0 7 1/1 * ? *")
+                .StartNow()
+                .Build();
+
             // Schedule jobs
             await _scheduler.ScheduleJob(countersJob, countersTrigger);
             await _scheduler.ScheduleJob(clearJob, clearTrigger);
             await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
+            await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
+            await _scheduler.ScheduleJob(lockdownEndJob, lockdownEndTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
         }
@@ -235,6 +261,56 @@ namespace DygBot.Services
                 catch (Exception ex)
                 {
                     await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Detail statistics error", ex));
+                }
+            }
+        }
+        public class LockdownBeginJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Beggining lockdown"));
+
+                try
+                {
+                    var guild = client.GetGuild(683084560451633212);
+
+                    var role = guild.EveryoneRole;
+                    var newPerm = role.Permissions.Modify(sendMessages: false);
+                    await role.ModifyAsync(x => x.Permissions = newPerm, new RequestOptions { AuditLogReason = "Lockdown begin" });
+                }
+                catch (Exception ex)
+                {
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown begin error", ex));
+                }
+            }
+        }
+        public class LockdownEndJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Ending lockdown"));
+
+                try
+                {
+                    var guild = client.GetGuild(683084560451633212);
+
+                    var role = guild.EveryoneRole;
+                    var newPerm = role.Permissions.Modify(sendMessages: true);
+                    await role.ModifyAsync(x => x.Permissions = newPerm, new RequestOptions { AuditLogReason = "Lockdown end" });
+                }
+                catch (Exception ex)
+                {
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown end error", ex));
                 }
             }
         }

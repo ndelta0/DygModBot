@@ -235,30 +235,7 @@ namespace DygBot.Services
 
                     if (!result.IsSuccess)
                     {
-                        await context.Message.DeleteAsync();
-                        IMessage errMsg = null;
-                        switch (result.Error)
-                        {
-                            case CommandError.UnknownCommand:
-                                break;
-
-                            case CommandError.BadArgCount:
-                                errMsg = await context.Channel.SendMessageAsync("Wrong argument count");
-                                break;
-
-                            case CommandError.UnmetPrecondition:
-                                errMsg = await context.Channel.SendMessageAsync(result.ErrorReason);
-                                break;
-
-                            default:
-                                errMsg = await context.Channel.SendMessageAsync("I've had trouble processing that command, try again later");
-                                break;
-                        }
-                        if (errMsg != null)
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(3));
-                            await errMsg.DeleteAsync();
-                        }
+                        await context.Channel.SendMessageAsync($"Something went wrong: {result.Error} - {result.ErrorReason}");
                     }
                 }
             }

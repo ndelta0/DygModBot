@@ -112,10 +112,10 @@ namespace DygBot.Services
                 .Build();
             ITrigger lockdownBeginTrigger = TriggerBuilder.Create()
                 .WithIdentity("lockdownBeginTrigger", "discordGroup")
-                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
-                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 3 1/1 * ? *")
-                .StartNow()
+                .StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
+                .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                //.WithCronSchedule("0 0 3 1/1 * ? *")
+                //.StartNow()
                 .Build();
 
             IJobDetail lockdownEndJob = JobBuilder.Create<LockdownEndJob>()
@@ -124,17 +124,17 @@ namespace DygBot.Services
                 .Build();
             ITrigger lockdownEndTrigger = TriggerBuilder.Create()
                 .WithIdentity("lockdownEndTrigger", "discordGroup")
-                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
-                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 7 1/1 * ? *")
-                .StartNow()
+                .StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                //.WithCronSchedule("0 0 7 1/1 * ? *")
+                //.StartNow()
                 .Build();
 
             // Schedule jobs
             await _scheduler.ScheduleJob(countersJob, countersTrigger);
             await _scheduler.ScheduleJob(clearJob, clearTrigger);
             await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
-            await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
+            //await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
             await _scheduler.ScheduleJob(lockdownEndJob, lockdownEndTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
@@ -279,7 +279,7 @@ namespace DygBot.Services
                 {
                     var guild = client.GetGuild(683084560451633212);
 
-                    var role = guild.EveryoneRole;
+                    var role = guild.GetRole(725026970697728083);
                     var newPerm = role.Permissions.Modify(sendMessages: false);
                     await role.ModifyAsync(x => x.Permissions = newPerm, new RequestOptions { AuditLogReason = "Lockdown begin" });
                 }
@@ -304,7 +304,7 @@ namespace DygBot.Services
                 {
                     var guild = client.GetGuild(683084560451633212);
 
-                    var role = guild.EveryoneRole;
+                    var role = guild.GetRole(725026970697728083);
                     var newPerm = role.Permissions.Modify(sendMessages: true);
                     await role.ModifyAsync(x => x.Permissions = newPerm, new RequestOptions { AuditLogReason = "Lockdown end" });
                 }

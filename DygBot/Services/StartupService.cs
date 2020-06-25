@@ -2,7 +2,6 @@
 using Discord.Commands;
 using Discord.WebSocket;
 using DygBot.Models;
-using NodaTime.TimeZones;
 using Quartz;
 using Quartz.Impl;
 using System;

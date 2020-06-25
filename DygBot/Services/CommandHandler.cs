@@ -65,7 +65,7 @@ namespace DygBot.Services
                 .WithIdentity("generalStatsTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(1))
-                .WithCronSchedule("0 1 0 ? * MON,TUE,WED,THU,FRI,SAT,SUN *")
+                .WithCronSchedule("0 1 0 ? * MON,TUE,WED,THU,FRI,SAT,SUN *", x => x.InTimeZone(TimeZoneInfo.FindSystemTimeZoneById("Central European Summer Time")))
                 .StartNow()
                 .Build();
 

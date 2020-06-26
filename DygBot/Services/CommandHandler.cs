@@ -65,7 +65,7 @@ namespace DygBot.Services
                 .WithIdentity("generalStatsTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(1))
-                .WithCronSchedule("0 1 2 1/1 * ? *")
+                .WithCronSchedule("0 1 22 1/1 * ? *")
                 .StartNow()
                 .Build();
 
@@ -256,7 +256,7 @@ namespace DygBot.Services
 
                 try
                 {
-                    var today = DateTime.Today.AddDays(-1);
+                    var today = DateTime.UtcNow.Date;
 
                     var additions = new List<GeneralStat>(client.Guilds.Count);
 

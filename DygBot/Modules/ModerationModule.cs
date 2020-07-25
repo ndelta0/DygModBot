@@ -1,11 +1,13 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.WebSocket;
 using DygBot.Preconditions;
 using DygBot.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static DygBot.Services.GitHubService.ConfigClass.ServerConfigClass.CountChannelClass;
@@ -17,7 +19,6 @@ namespace DygBot.Modules
     [RequireOwner(Group = "Permission")]
     [RequireUserPermission(GuildPermission.Administrator, Group = "Permission")]
     [RequireManagementRole(Group = "Permission")]
-    [Group("mod")]
     public class ModerationModule : InteractiveBase<SocketCommandContext>
     {
         private readonly GitHubService _git;
@@ -44,6 +45,31 @@ namespace DygBot.Modules
                     await ReplyAsync($"Prefix set to {prefix}");    // Reply
                 }
             }
+        }
+
+        [Command("roles")]
+        [Summary("Pokazuje role użytkownika")]
+        public async Task RolesAsync([Summary("Użytkownik")]SocketGuildUser user = null)
+        {
+            if (user == null)
+            {
+                if (Context.User is SocketGuildUser)
+                {
+                    user = Context.User as SocketGuildUser;
+                }
+            }
+
+            var roles = user.Roles;
+
+            var description = new StringBuilder().AppendJoin('\n', roles).ToString();
+
+            var embed = new EmbedBuilder
+            {
+                Title = $"Role użytkownika {user.Username}#{user.Discriminator}",
+                Description = description
+            }.WithCurrentTimestamp().Build();
+
+            await ReplyAsync(embed: embed);
         }
 
         [Group("managementRole")]

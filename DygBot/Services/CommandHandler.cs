@@ -44,6 +44,7 @@ namespace DygBot.Services
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
             _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
+            _discord.ReactionAdded += Discord_ReactionAdded;
 
             _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
             _commands.AddTypeReader(typeof(Uri), new UriTypeReader());
@@ -70,6 +71,29 @@ namespace DygBot.Services
                 .Build();
 
             _scheduler.ScheduleJob(generalStatsJob, generalStatsTrigger).Wait();
+        }
+
+        private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
+        {
+            if (socketMessageChannel.Id != 719251462697517227)
+            {
+                if (socketReaction.Emote.Equals(Emote.Parse("<:rzyg:719249995064279112>")))
+                {
+                    if (socketReaction.User.IsSpecified)
+                    {
+                        if (socketReaction.User.Value is SocketGuildUser user)
+                        {
+                            if (!user.Roles.Any(x => x.Id == 683095642800652375 || x.Id == 683095728402596006))
+                            {
+                                if((await userCacheable.GetOrDownloadAsync()) is SocketUserMessage message)
+                                {
+                                    await message.RemoveReactionAsync(Emote.Parse("<:rzyg:719249995064279112>"), user);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private enum VcChangeState  // Enum with states of user being in VC
@@ -107,7 +131,7 @@ namespace DygBot.Services
                                 var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));  // Get role object
                                 if (role != null)
                                 {
-                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" }); // Add role
+                                    await user.AddRoleAsync(role, new RequestOptions { AuditLogReason = "Joined VC" }); // Add role
                                 }
                             }
                             break;
@@ -119,7 +143,7 @@ namespace DygBot.Services
                                 var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });    // Remove role
+                                    await user.RemoveRoleAsync(role, new RequestOptions { AuditLogReason = "Left VC" });    // Remove role
                                 }
                             }
                             break;
@@ -131,7 +155,7 @@ namespace DygBot.Services
                                 var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.RemoveRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Left VC" });    // Remove role
+                                    await user.RemoveRoleAsync(role, new RequestOptions { AuditLogReason = "Left VC" });    // Remove role
                                 }
                             }
 
@@ -141,7 +165,7 @@ namespace DygBot.Services
                                 var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
                                 if (role != null)
                                 {
-                                    await user.AddRoleAsync(role, new Discord.RequestOptions { AuditLogReason = "Joined VC" }); // Add role
+                                    await user.AddRoleAsync(role, new RequestOptions { AuditLogReason = "Joined VC" }); // Add role
                                 }
                             }
 

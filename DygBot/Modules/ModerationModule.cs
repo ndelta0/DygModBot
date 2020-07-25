@@ -59,7 +59,7 @@ namespace DygBot.Modules
                 }
             }
 
-            var roles = user.Roles;
+            var roles = user.Roles.SkipWhile(x => x.IsEveryone);
 
             var description = new StringBuilder().AppendJoin('\n', roles).ToString();
 

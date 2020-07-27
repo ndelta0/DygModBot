@@ -205,6 +205,15 @@ namespace DygBot.Services
             else
                 _guildUniqueSenders[guildId] = new HashSet<ulong> { context.User.Id };
 
+            if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))
+            {
+                if (string.IsNullOrWhiteSpace(context.Message.Content))
+                {
+                    await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
+                    return;
+                }
+            }
+
             if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
             {
                 var emotesString = _git.Config.Servers[guildIdString].AutoReact[context.Channel.Id.ToString()];   // Get strings of emotes

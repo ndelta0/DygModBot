@@ -22,7 +22,7 @@ namespace DygBot.Services
         private readonly IScheduler _scheduler;
         private readonly LoggingService _logging;
 
-        private readonly Dictionary<ulong, List<ulong>> _guildUniqueSenders = new Dictionary<ulong, List<ulong>>();
+        private readonly Dictionary<ulong, HashSet<ulong>> _guildUniqueSenders = new Dictionary<ulong, HashSet<ulong>>();
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -45,9 +45,11 @@ namespace DygBot.Services
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
             _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
             _discord.ReactionAdded += Discord_ReactionAdded;
+            _discord.Ready += async () => await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
 
             _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
             _commands.AddTypeReader(typeof(Uri), new UriTypeReader());
+            _commands.AddTypeReader<TimeSpan>(new CustomTimeSpanTypeReader(), true);
 
             var defaultJobDataMap = new JobDataMap()
             {
@@ -85,7 +87,7 @@ namespace DygBot.Services
                         {
                             if (!user.Roles.Any(x => x.Id == 683095642800652375 || x.Id == 683095728402596006))
                             {
-                                if((await userCacheable.GetOrDownloadAsync()) is SocketUserMessage message)
+                                if ((await userCacheable.GetOrDownloadAsync()) is SocketUserMessage message)
                                 {
                                     await message.RemoveReactionAsync(Emote.Parse("<:rzyg:719249995064279112>"), user);
                                 }
@@ -198,13 +200,10 @@ namespace DygBot.Services
 
             if (_guildUniqueSenders.ContainsKey(guildId))
             {
-                if (!_guildUniqueSenders[guildId].Contains(context.User.Id))
-                {
-                    _guildUniqueSenders[guildId].Add(context.User.Id);
-                }
+                 _guildUniqueSenders[guildId].Add(context.User.Id);
             }
             else
-                _guildUniqueSenders[guildId] = new List<ulong> { context.User.Id };
+                _guildUniqueSenders[guildId] = new HashSet<ulong> { context.User.Id };
 
             if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
             {
@@ -232,36 +231,47 @@ namespace DygBot.Services
             int argPos = 0;     // Check if the message has a valid command prefix
             if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
             {
-                bool executeCommand = false;
-                var command = msg.Content.Split(' ')[0].Substring(argPos);
-                if (command != "mod")
+            bool executeCommand = false;
+            var command = msg.Content.Split(' ')[0].Substring(argPos);
+            command = _commands.Commands.First(x => x.Aliases.Contains(command)).Name;
+            if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(command))
+            {
+                if (_git.Config.Servers[guildIdString].CommandLimit[command].Contains(context.Channel.Id.ToString()))
                 {
-                    command = _commands.Commands.First(x => x.Aliases.Contains(command)).Name;
-                    if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(command))
-                    {
-                        if (_git.Config.Servers[guildIdString].CommandLimit[command].Contains(context.Channel.Id.ToString()))
-                        {
-                            executeCommand = true;
-                        }
-                        else
-                            executeCommand = false;
-                    }
-                    else
-                        executeCommand = true;
+                    executeCommand = true;
                 }
                 else
-                    executeCommand = true;
+                    executeCommand = false;
+            }
+            else
+                executeCommand = true;
 
 
-                if (executeCommand)
+            if (executeCommand)
+            {
+                var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
+
+                if (!result.IsSuccess)
                 {
-                    var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
-
-                    if (!result.IsSuccess)
-                    {
-                        await context.Channel.SendMessageAsync($"Something went wrong: {result.Error} - {result.ErrorReason}");
-                    }
+                        switch (result.Error)
+                        {
+                            case CommandError.BadArgCount:
+                                await context.Channel.SendMessageAsync("Zła ilość argumentów");
+                                break;
+                            case CommandError.UnmetPrecondition:
+                                if (result.ErrorReason == "Module precondition group Permission failed")
+                                    await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia - nie masz wymaganych uprawnień");
+                                else
+                                    await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia");
+                                break;
+                            case CommandError.Unsuccessful:
+                            case CommandError.Exception:
+                            case CommandError.ParseFailed:
+                                await context.Channel.SendMessageAsync("Miałem problem z tym poleceniem");
+                                break;
+                        }
                 }
+            }
             }
         }
 

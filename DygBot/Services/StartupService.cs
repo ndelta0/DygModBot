@@ -1,14 +1,16 @@
 ﻿using Discord;
+using Discord.API;
 using Discord.Commands;
 using Discord.WebSocket;
 using DygBot.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Quartz;
-using Quartz.Impl;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace DygBot.Services
@@ -22,6 +24,7 @@ namespace DygBot.Services
         private readonly LoggingService _logging;
         private readonly AppDbContext _dbContext;
         private readonly IScheduler _scheduler;
+        private readonly Queue _dbQueue;
 
         public StartupService(
             IServiceProvider provider,
@@ -39,6 +42,7 @@ namespace DygBot.Services
             _logging = logging;
             _dbContext = dbContext;
             _scheduler = scheduler;
+            _dbQueue = new Queue();
         }
 
         public async Task StartAsync()
@@ -64,7 +68,8 @@ namespace DygBot.Services
                 {"Client", _discord },
                 {"GitHub", _gitHub },
                 {"Logging", _logging },
-                {"DbContext", _dbContext }
+                {"DbContext", _provider.GetRequiredService<AppDbContext>() },
+                { "Queue", _dbQueue }
             };
 
             // Create job for updating counters
@@ -129,12 +134,34 @@ namespace DygBot.Services
                 .StartNow()
                 .Build();
 
+            IJobDetail banWarnJob = JobBuilder.Create<BanWarnJob>()
+                .WithIdentity("banWarnJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger banWarnTrigger = TriggerBuilder.Create()
+                .WithIdentity("banWarnTrigger", "discordGroup")
+                .WithCronSchedule("0 0/1 * 1/1 * ? *")
+                .StartNow()
+                .Build();
+
+            IJobDetail dbUpdateJob = JobBuilder.Create<DbUpdateJob>()
+                .WithIdentity("dbUpdateJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger dbUpdateTrigger = TriggerBuilder.Create()
+                .WithIdentity("dbUpdateTrigger", "discordGroup")
+                .WithCronSchedule("0 0/1 * 1/1 * ? *")
+                .StartNow()
+                .Build();
+
             // Schedule jobs
             await _scheduler.ScheduleJob(countersJob, countersTrigger);
             await _scheduler.ScheduleJob(clearJob, clearTrigger);
             await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
             await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
             await _scheduler.ScheduleJob(lockdownEndJob, lockdownEndTrigger);
+            await _scheduler.ScheduleJob(banWarnJob, banWarnTrigger);
+            await _scheduler.ScheduleJob(dbUpdateJob, dbUpdateTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
         }
@@ -149,7 +176,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
 
-                await logging.OnLogAsync(new Discord.LogMessage(Discord.LogSeverity.Info, "Quartz", "Updating counters"));  // Log
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating counters"));  // Log
 
                 foreach (var kvp in git.Config.Servers)
                 {
@@ -229,6 +256,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
                 var dbContext = (AppDbContext)dataMap["DbContext"];
+                var queue = (Queue)dataMap["Queue"];
 
                 await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating detail statistics"));
 
@@ -255,7 +283,7 @@ namespace DygBot.Services
                         additions.Add(stats);
                     }
                     await dbContext.DetailStat.AddRangeAsync(additions);
-                    await dbContext.SaveChangesAsync();
+                    queue.Enqueue(typeof(DetailStat));
                 }
                 catch (Exception ex)
                 {
@@ -311,6 +339,121 @@ namespace DygBot.Services
                 {
                     await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown end error", ex));
                 }
+            }
+        }
+        public class BanWarnJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+                var dbContext = (AppDbContext)dataMap["DbContext"];
+                var queue = (Queue)dataMap["Queue"];
+
+                bool modified = false;
+
+                await foreach (var ban in dbContext.Bans.ToAsyncEnumerable().Where(x => !x.Finished && x.BanEnd != DateTime.MinValue && x.BanEnd.CompareTo(DateTime.UtcNow) < 0))
+                {
+                    var guildEmbed = new EmbedBuilder()
+                        .WithTitle("__Użytkownik został odbanowany__")
+                        .WithColor(new Color(0x4AFF00))
+                        .WithTimestamp(DateTimeOffset.UtcNow)
+                        .WithFooter(footer =>
+                        {
+                            footer
+                                .WithText($"Ban ID: {ban.Id}");
+                        })
+                        .WithAuthor(author =>
+                        {
+                            author
+                                .WithName($"Unban | {ban.UserId}");
+                        })
+                        .Build();
+
+                    await client.GetGuild(ban.GuildId).RemoveBanAsync(ban.UserId);
+                        
+                    if (git.Config.Servers[ban.GuildId.ToString()].NotificationChannelId != default)
+                    {
+                        await client.GetGuild(ban.GuildId).GetTextChannel(git.Config.Servers[ban.GuildId.ToString()].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
+                    }
+
+                    ban.Finished = true;
+                    dbContext.Bans.Update(ban);
+                    modified = true;
+                }
+
+                await foreach (var warn in dbContext.Warns.ToAsyncEnumerable().Where(x => !x.Expired && x.WarnExpiration.CompareTo(DateTime.UtcNow) < 0))
+                {
+                    var guildEmbed = new EmbedBuilder()
+                        .WithTitle("__Upomnienie wygasło__")
+                        .WithColor(new Color(0x4AFF00))
+                        .WithTimestamp(DateTimeOffset.UtcNow)
+                        .WithFooter(footer =>
+                        {
+                            footer
+                                .WithText($"Warn ID: {warn.Id}");
+                        })
+                        .WithAuthor(author =>
+                        {
+                            author
+                                .WithName($"Warn expire | {warn.UserId}");
+                        })
+                        .Build();
+
+                    var dmEmbed = new EmbedBuilder()
+                        .WithTitle("__Twój warn na serwerze wygasł__")
+                        .WithColor(new Color(0x4AFF00))
+                        .WithTimestamp(DateTimeOffset.UtcNow)
+                        .WithFooter(footer =>
+                        {
+                            footer
+                                .WithText($"Warn ID: {warn.Id}");
+                        })
+                        .WithAuthor(author =>
+                        {
+                            author
+                                .WithName($"{client.GetGuild(warn.GuildId).Name}")
+                                .WithIconUrl(client.GetGuild(warn.GuildId).IconUrl);
+                        })
+                        .Build();
+
+                    if (git.Config.Servers[warn.GuildId.ToString()].NotificationChannelId != default)
+                    {
+                        await client.GetGuild(warn.GuildId).GetTextChannel(git.Config.Servers[warn.GuildId.ToString()].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
+                    }
+                    await client.GetUser(warn.UserId).SendMessageAsync(embed: dmEmbed);
+
+                    warn.Expired = true;
+                    dbContext.Warns.Update(warn);
+                    modified = true;
+                }
+
+                if (modified)
+                {
+                    await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Managing bans and warns"));
+                    queue.Enqueue(typeof(Ban));
+                    queue.Enqueue(typeof(Warn));
+                }
+            }
+        }
+        public class DbUpdateJob : IJob
+        {
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+                var dbContext = (AppDbContext)dataMap["DbContext"];
+                var queue = (Queue)dataMap["Queue"];
+
+                if (queue.Count > 0)
+                {
+                    await dbContext.SaveChangesAsync();
+                }
+                foreach (var _ in queue) { }
             }
         }
     }

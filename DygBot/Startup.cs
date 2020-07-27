@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Quartz;
-using Quartz.Core;
 using Quartz.Impl;
 using System;
 using System.Collections.Specialized;

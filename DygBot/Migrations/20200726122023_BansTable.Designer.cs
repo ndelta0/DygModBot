@@ -3,14 +3,16 @@ using System;
 using DygBot.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace DygBot.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200726122023_BansTable")]
+    partial class BansTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,35 +89,6 @@ namespace DygBot.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("GeneralStats");
-                });
-
-            modelBuilder.Entity("DygBot.Models.Warn", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Expired")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<string>("Reason")
-                        .HasColumnType("longtext CHARACTER SET utf8mb4");
-
-                    b.Property<ulong>("UserId")
-                        .HasColumnType("bigint unsigned");
-
-                    b.Property<DateTime>("WarnExpiration")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<ulong>("WhoWarned")
-                        .HasColumnType("bigint unsigned");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Warns");
                 });
 #pragma warning restore 612, 618
         }

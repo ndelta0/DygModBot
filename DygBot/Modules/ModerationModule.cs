@@ -105,9 +105,13 @@ namespace DygBot.Modules
                 {
                     if (Context.User.Id != Context.Guild.OwnerId)
                     {
-                        if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Union(member.Roles.Select(x => x.Id.ToString()).ToList()).Count() > 0)
+                        var roles = ((SocketGuildUser)Context.User).Roles.Select(x => x.Id.ToString());
+                        bool canWarn = roles.Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0;
+                        canWarn = !(member.Roles.Select(x => x.Id.ToString()).Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0);
+
+                        if (!canWarn)
                         {
-                            await ReplyAsync("Nie możesz zbanować tej osoby");
+                            await ReplyAsync("Nie możesz upomnieć tej osoby");
                             return;
                         }
                     }
@@ -221,9 +225,13 @@ namespace DygBot.Modules
                 {
                     if (Context.User.Id != Context.Guild.OwnerId)
                     {
-                        if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Union(member.Roles.Select(x => x.Id.ToString()).ToList()).Count() > 0)
+                        var roles = ((SocketGuildUser)Context.User).Roles.Select(x => x.Id.ToString());
+                        bool canWarn = roles.Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0;
+                        canWarn = !(member.Roles.Select(x => x.Id.ToString()).Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0);
+
+                        if (!canWarn)
                         {
-                            await ReplyAsync("Nie możesz zbanować tej osoby");
+                            await ReplyAsync("Nie możesz upomnieć tej osoby");
                             return;
                         }
                     }
@@ -338,7 +346,11 @@ namespace DygBot.Modules
                 {
                     if (Context.User.Id != Context.Guild.OwnerId)
                     {
-                        if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Union(member.Roles.Select(x => x.Id.ToString()).ToList()).Count() > 0)
+                        var roles = ((SocketGuildUser)Context.User).Roles.Select(x => x.Id.ToString());
+                        bool canWarn = roles.Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0;
+                        canWarn = !(member.Roles.Select(x => x.Id.ToString()).Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0);
+
+                        if (!canWarn)
                         {
                             await ReplyAsync("Nie możesz upomnieć tej osoby");
                             return;
@@ -433,7 +445,11 @@ namespace DygBot.Modules
                 {
                     if (Context.User.Id != Context.Guild.OwnerId)
                     {
-                        if (_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles.Union(member.Roles.Select(x => x.Id.ToString()).ToList()).Count() > 0)
+                        var roles = ((SocketGuildUser)Context.User).Roles.Select(x => x.Id.ToString());
+                        bool canWarn = roles.Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0;
+                        canWarn = !(member.Roles.Select(x => x.Id.ToString()).Intersect(_git.Config.Servers[Context.Guild.Id.ToString()].ManagementRoles).Count() > 0);
+
+                        if (!canWarn)
                         {
                             await ReplyAsync("Nie możesz upomnieć tej osoby");
                             return;

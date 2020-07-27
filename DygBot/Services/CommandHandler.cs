@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using DygBot.Models;
@@ -21,6 +22,7 @@ namespace DygBot.Services
         private readonly AppDbContext _dbContext;
         private readonly IScheduler _scheduler;
         private readonly LoggingService _logging;
+        private readonly InteractiveService _interactive;
 
         private readonly Dictionary<ulong, HashSet<ulong>> _guildUniqueSenders = new Dictionary<ulong, HashSet<ulong>>();
 
@@ -31,7 +33,8 @@ namespace DygBot.Services
             GitHubService git,
             AppDbContext dbContext,
             IScheduler scheduler,
-            LoggingService logging)
+            LoggingService logging,
+            InteractiveService interactiveService)
         {
             _discord = discord;
             _commands = commands;
@@ -40,6 +43,7 @@ namespace DygBot.Services
             _dbContext = dbContext;
             _scheduler = scheduler;
             _logging = logging;
+            _interactive = interactiveService;
 
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
@@ -210,6 +214,7 @@ namespace DygBot.Services
                 if (string.IsNullOrWhiteSpace(context.Message.Content))
                 {
                     await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
+                    await _interactive.ReplyAndDeleteAsync(context, "Wysyłaj wiadomości tylko z podpisami", timeout: TimeSpan.FromSeconds(3));
                     return;
                 }
             }
@@ -240,47 +245,51 @@ namespace DygBot.Services
             int argPos = 0;     // Check if the message has a valid command prefix
             if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
             {
-            bool executeCommand = false;
-            var command = msg.Content.Split(' ')[0].Substring(argPos);
-            command = _commands.Commands.First(x => x.Aliases.Contains(command)).Name;
-            if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(command))
-            {
-                if (_git.Config.Servers[guildIdString].CommandLimit[command].Contains(context.Channel.Id.ToString()))
+                bool executeCommand = false;
+                var commandStr = msg.Content.Split(' ')[0].Substring(argPos);
+                var command = _commands.Commands.FirstOrDefault(x => x.Aliases.Contains(commandStr));
+                if (command != null)
                 {
-                    executeCommand = true;
+                    commandStr = command.Name;
+                }
+                if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(commandStr))
+                {
+                    if (_git.Config.Servers[guildIdString].CommandLimit[commandStr].Contains(context.Channel.Id.ToString()))
+                    {
+                        executeCommand = true;
+                    }
+                    else
+                        executeCommand = false;
                 }
                 else
-                    executeCommand = false;
-            }
-            else
-                executeCommand = true;
+                    executeCommand = true;
 
 
-            if (executeCommand)
-            {
-                var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
-
-                if (!result.IsSuccess)
+                if (executeCommand)
                 {
-                        switch (result.Error)
-                        {
-                            case CommandError.BadArgCount:
-                                await context.Channel.SendMessageAsync("Zła ilość argumentów");
-                                break;
-                            case CommandError.UnmetPrecondition:
-                                if (result.ErrorReason == "Module precondition group Permission failed")
-                                    await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia - nie masz wymaganych uprawnień");
-                                else
-                                    await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia");
-                                break;
-                            case CommandError.Unsuccessful:
-                            case CommandError.Exception:
-                            case CommandError.ParseFailed:
-                                await context.Channel.SendMessageAsync("Miałem problem z tym poleceniem");
-                                break;
-                        }
+                    var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
+
+                    if (!result.IsSuccess)
+                    {
+                            switch (result.Error)
+                            {
+                                case CommandError.BadArgCount:
+                                    await context.Channel.SendMessageAsync("Zła ilość argumentów");
+                                    break;
+                                case CommandError.UnmetPrecondition:
+                                    if (result.ErrorReason == "Module precondition group Permission failed")
+                                        await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia - nie masz wymaganych uprawnień");
+                                    else
+                                        await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia");
+                                    break;
+                                case CommandError.Unsuccessful:
+                                case CommandError.Exception:
+                                case CommandError.ParseFailed:
+                                    await context.Channel.SendMessageAsync("Miałem problem z tym poleceniem");
+                                    break;
+                            }
+                    }
                 }
-            }
             }
         }
 

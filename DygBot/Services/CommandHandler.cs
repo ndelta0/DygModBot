@@ -214,7 +214,7 @@ namespace DygBot.Services
                 if (string.IsNullOrWhiteSpace(context.Message.Content))
                 {
                     await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
-                    await _interactive.ReplyAndDeleteAsync(context, "Wysyłaj wiadomości tylko z podpisami", timeout: TimeSpan.FromSeconds(3));
+                    await _interactive.ReplyAndDeleteAsync(context, "Twoja wiadomość nie zawiera podpisu", timeout: TimeSpan.FromSeconds(3));
                     return;
                 }
             }

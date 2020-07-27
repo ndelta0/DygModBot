@@ -370,7 +370,7 @@ namespace DygBot.Modules
                     await _dbContext.SaveChangesAsync();
 
                     var embed = new EmbedBuilder()
-                        .WithTitle("__Użytkownik został upomniony__")
+                        .WithTitle("__Użytkownik został upomniany__")
                         .WithColor(new Color(0xFFCD00))
                         .WithDescription($"ID użytkownika: {member.Id}")
                         .WithAuthor(author =>
@@ -411,7 +411,7 @@ namespace DygBot.Modules
                     }
 
                     var embed2 = new EmbedBuilder()
-                        .WithTitle("__Zostałeś/-aś upomniony/-a na serwerze__")
+                        .WithTitle("__Zostałeś/-aś upomniany/-a na serwerze__")
                         .WithColor(new Color(0xFFCD00))
                         .WithTimestamp(DateTimeOffset.UtcNow)
                         .WithFooter(footer => {
@@ -469,7 +469,7 @@ namespace DygBot.Modules
                     await _dbContext.SaveChangesAsync();
 
                     var embed = new EmbedBuilder()
-                        .WithTitle("__Użytkownik został upomniony__")
+                        .WithTitle("__Użytkownik został upomniany__")
                         .WithColor(new Color(0xFFCD00))
                         .WithDescription($"ID użytkownika: {member.Id}")
                         .WithAuthor(author =>
@@ -510,7 +510,7 @@ namespace DygBot.Modules
                     }
 
                     var embed2 = new EmbedBuilder()
-                        .WithTitle("__Zostałeś/-aś upomniony/-a na serwerze__")
+                        .WithTitle("__Zostałeś/-aś upomniany/-a na serwerze__")
                         .WithColor(new Color(0xFFCD00))
                         .WithTimestamp(DateTimeOffset.UtcNow)
                         .WithFooter(footer => {

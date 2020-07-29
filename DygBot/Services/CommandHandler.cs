@@ -87,6 +87,9 @@ namespace DygBot.Services
 
         private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
         {
+            if (socketReaction.UserId == _discord.CurrentUser.Id)
+                return;
+
             if (socketMessageChannel.Id != 719251462697517227)
             {
                 if (socketReaction.Emote.Equals(Emote.Parse("<:rzyg:719249995064279112>")))
@@ -187,6 +190,9 @@ namespace DygBot.Services
 
         private async Task Discord_ReactionRemoved(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
         {
+            if (socketReaction.UserId == _discord.CurrentUser.Id)
+                return;
+
             var guild = (socketMessageChannel as SocketTextChannel).Guild;
             if (_git.Config.Servers[guild.Id].ReactionRoles.ContainsKey(socketMessageChannel.Id))
             {

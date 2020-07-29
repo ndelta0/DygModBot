@@ -58,31 +58,6 @@ namespace DygBot.Modules
             }
         }
 
-        [Command("roles")]
-        [Summary("Pokazuje role użytkownika")]
-        public async Task RolesAsync([Summary("Użytkownik")] SocketGuildUser user = null)
-        {
-            if (user == null)
-            {
-                if (Context.User is SocketGuildUser)
-                {
-                    user = Context.User as SocketGuildUser;
-                }
-            }
-
-            var roles = user.Roles.SkipWhile(x => x.IsEveryone);
-
-            var description = new StringBuilder().AppendJoin('\n', roles).ToString();
-
-            var embed = new EmbedBuilder
-            {
-                Title = $"Role użytkownika {user.Username}#{user.Discriminator}",
-                Description = description
-            }.WithCurrentTimestamp().Build();
-
-            await ReplyAsync(embed: embed);
-        }
-
         [Command("config-reload", true)]
         [Summary("Zmusza bota do przeładowania konfiguracji")]
         public async Task ConfigReloadAsync()

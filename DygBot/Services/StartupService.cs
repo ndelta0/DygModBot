@@ -10,7 +10,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace DygBot.Services
@@ -22,7 +21,6 @@ namespace DygBot.Services
         private readonly CommandService _commands;
         private readonly GitHubService _gitHub;
         private readonly LoggingService _logging;
-        private readonly AppDbContext _dbContext;
         private readonly IScheduler _scheduler;
         private readonly Queue _dbQueue;
 
@@ -32,7 +30,6 @@ namespace DygBot.Services
             CommandService commands,
             GitHubService gitHub,
             LoggingService logging,
-            AppDbContext dbContext,
             IScheduler scheduler)
         {
             _provider = provider;
@@ -40,7 +37,6 @@ namespace DygBot.Services
             _commands = commands;
             _gitHub = gitHub;
             _logging = logging;
-            _dbContext = dbContext;
             _scheduler = scheduler;
             _dbQueue = new Queue();
         }
@@ -180,14 +176,14 @@ namespace DygBot.Services
 
                 foreach (var kvp in git.Config.Servers)
                 {
-                    if (!client.Guilds.Any(x => x.Id.ToString() == kvp.Key))    // If bot is not in server
+                    if (!client.Guilds.Any(x => x.Id == kvp.Key))    // If bot is not in server
                     {
                         continue;
                     }
                     foreach (var countChannel in kvp.Value.CountChannels)
                     {
-                        var guild = client.Guilds.First(x => x.Id.ToString() == kvp.Key);   // Get guild object
-                        var channel = guild.Channels.First(x => x.Id.ToString() == countChannel.Key);   // Get channel object
+                        var guild = client.Guilds.First(x => x.Id == kvp.Key);   // Get guild object
+                        var channel = guild.Channels.First(x => x.Id == countChannel.Key);   // Get channel object
                         int value = 0;
                         switch (countChannel.Value.Property)
                         {
@@ -374,9 +370,9 @@ namespace DygBot.Services
 
                     await client.GetGuild(ban.GuildId).RemoveBanAsync(ban.UserId);
                         
-                    if (git.Config.Servers[ban.GuildId.ToString()].NotificationChannelId != default)
+                    if (git.Config.Servers[ban.GuildId].NotificationChannelId != default)
                     {
-                        await client.GetGuild(ban.GuildId).GetTextChannel(git.Config.Servers[ban.GuildId.ToString()].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
+                        await client.GetGuild(ban.GuildId).GetTextChannel(git.Config.Servers[ban.GuildId].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
                     }
 
                     ban.Finished = true;
@@ -419,9 +415,9 @@ namespace DygBot.Services
                         })
                         .Build();
 
-                    if (git.Config.Servers[warn.GuildId.ToString()].NotificationChannelId != default)
+                    if (git.Config.Servers[warn.GuildId].NotificationChannelId != default)
                     {
-                        await client.GetGuild(warn.GuildId).GetTextChannel(git.Config.Servers[warn.GuildId.ToString()].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
+                        await client.GetGuild(warn.GuildId).GetTextChannel(git.Config.Servers[warn.GuildId].NotificationChannelId).SendMessageAsync(embed: guildEmbed);
                     }
                     await client.GetUser(warn.UserId).SendMessageAsync(embed: dmEmbed);
 
@@ -443,9 +439,6 @@ namespace DygBot.Services
             public async Task Execute(IJobExecutionContext context)
             {
                 var dataMap = context.JobDetail.JobDataMap;
-                var client = (DiscordSocketClient)dataMap["Client"];
-                var git = (GitHubService)dataMap["GitHub"];
-                var logging = (LoggingService)dataMap["Logging"];
                 var dbContext = (AppDbContext)dataMap["DbContext"];
                 var queue = (Queue)dataMap["Queue"];
 

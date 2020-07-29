@@ -1,10 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using Discord;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using static DygBot.Modules.ModerationModule.ReactionRoleClass;
 
 namespace DygBot.Services
 {
@@ -14,6 +16,7 @@ namespace DygBot.Services
         private readonly string _gitHubApiToken = Environment.GetEnvironmentVariable("GITHUB_API_TOKEN");
         private readonly Uri _configUri;
         private string _sha;
+        private readonly JsonSerializerSettings _settings;
 
         public ConfigClass Config;
 
@@ -27,6 +30,10 @@ namespace DygBot.Services
             else
                 _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.json");
 
+            _settings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
         }
 
         public async Task DownloadConfig()
@@ -47,10 +54,7 @@ namespace DygBot.Services
 
             Config = new ConfigClass();
             string decoded = Encoding.UTF8.GetString(Convert.FromBase64String(responseObject.Content)); // Decode Base64 encoded string
-            Config = JsonConvert.DeserializeObject<ConfigClass>(decoded, new JsonSerializerSettings  // Deserialize config into object
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver() // Use CamelCase naming strategy (boundChannels -> BoundChannels)
-            });
+            Config = JsonConvert.DeserializeObject<ConfigClass>(decoded, _settings);
             _sha = responseObject.Sha; // Update SHA (for updating config later)
         }
 
@@ -62,10 +66,7 @@ namespace DygBot.Services
 
             var requestObject = new GitHubPutRequest { Sha = _sha };    // Copy the old config SHA
 
-            var json = JsonConvert.SerializeObject(Config, Formatting.Indented, new JsonSerializerSettings   // Serialize config into json
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()     // Use CamelCase name resolver
-            });
+            var json = JsonConvert.SerializeObject(Config, Formatting.Indented, _settings);
 
             requestObject.Content = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));   // Base64 encode config
 
@@ -98,16 +99,22 @@ namespace DygBot.Services
                     public CountPropertyEnum Property { get; set; }
                     public string Template { get; set; }
                 }
-                public string Prefix { get; set; }
-                public List<string> ManagementRoles { get; set; } = new List<string>();
-                public Dictionary<string, List<string>> AutoReact { get; set; } = new Dictionary<string, List<string>>();
-                public Dictionary<string, CountChannelClass> CountChannels { get; set; } = new Dictionary<string, CountChannelClass>();
-                public Dictionary<string, string> VcTextRole { get; set; } = new Dictionary<string, string>();
-                public Dictionary<string, List<string>> CommandLimit { get; set; } = new Dictionary<string, List<string>>();
+                public class ReactionRole
+                {
+                    public ReactionAction Action { get; set; }
+                    public Dictionary<string, ulong> Roles { get; set; } = new Dictionary<string, ulong>();
+                }
+                public string Prefix { get; set; } = "db!";
+                public List<ulong> ManagementRoles { get; set; } = new List<ulong>();
+                public Dictionary<ulong, List<string>> AutoReact { get; set; } = new Dictionary<ulong, List<string>>();
+                public Dictionary<ulong, CountChannelClass> CountChannels { get; set; } = new Dictionary<ulong, CountChannelClass>();
+                public Dictionary<ulong, ulong> VcTextRole { get; set; } = new Dictionary<ulong, ulong>();
+                public Dictionary<string, List<ulong>> CommandLimit { get; set; } = new Dictionary<string, List<ulong>>();
                 public ulong NotificationChannelId { get; set; } = default;
+                public Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>> ReactionRoles { get; set; } = new Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>>();
             }
             public string DiscordToken { get; set; }
-            public Dictionary<string, ServerConfigClass> Servers { get; set; }
+            public Dictionary<ulong, ServerConfigClass> Servers { get; set; }
         }
 
         public class GitHubGetResponse

@@ -24,7 +24,7 @@ namespace DygBot.Modules
         [Alias("commands")]
         public async Task HelpAsync()
         {
-            string prefix = _git.Config.Servers[Context.Guild.Id.ToString()].Prefix;    // Get prefix for server
+            string prefix = _git.Config.Servers[Context.Guild.Id].Prefix;    // Get prefix for server
             var builder = new EmbedBuilder()    // Create an embed
             {
                 Color = Color.Green,    // Set color

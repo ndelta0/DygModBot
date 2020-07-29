@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using static DygBot.Services.GitHubService;
+using static DygBot.Modules.ModerationModule.ReactionRoleClass;
 
 namespace DygBot.Services
 {
@@ -49,11 +50,14 @@ namespace DygBot.Services
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
             _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
             _discord.ReactionAdded += Discord_ReactionAdded;
+            _discord.ReactionRemoved += Discord_ReactionRemoved;
             _discord.Ready += async () => await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
 
-            _commands.AddTypeReader(typeof(object), new ObjectTypeReader());    // Add object type reader
-            _commands.AddTypeReader(typeof(Uri), new UriTypeReader());
+            _commands.AddTypeReader<object>(new ObjectTypeReader());
+            _commands.AddTypeReader<Uri>(new UriTypeReader());
             _commands.AddTypeReader<TimeSpan>(new CustomTimeSpanTypeReader(), true);
+            _commands.AddTypeReader<IEmote>(new IEmoteTypeReader());
+            _commands.AddTypeReader<IMessage>(new IMessageTypeReader());
 
             var defaultJobDataMap = new JobDataMap()
             {
@@ -61,7 +65,7 @@ namespace DygBot.Services
                 {"GitHub", _git },
                 {"Logging", _logging },
                 {"DbContext", _dbContext },
-                { "UniqueSendersDict", _guildUniqueSenders }
+                {"UniqueSendersDict", _guildUniqueSenders }
             };
 
             IJobDetail generalStatsJob = JobBuilder.Create<GeneralStatsJob>()
@@ -79,6 +83,8 @@ namespace DygBot.Services
             _scheduler.ScheduleJob(generalStatsJob, generalStatsTrigger).Wait();
         }
 
+        
+
         private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
         {
             if (socketMessageChannel.Id != 719251462697517227)
@@ -95,6 +101,117 @@ namespace DygBot.Services
                                 {
                                     await message.RemoveReactionAsync(Emote.Parse("<:rzyg:719249995064279112>"), user);
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            var guild = (socketMessageChannel as SocketTextChannel).Guild;
+            if (_git.Config.Servers[guild.Id].ReactionRoles.ContainsKey(socketMessageChannel.Id))
+            {
+                var message = await userCacheable.GetOrDownloadAsync();
+                if (_git.Config.Servers[guild.Id].ReactionRoles[socketMessageChannel.Id].TryGetValue(message.Id, out var reactionRoles))
+                {
+                    foreach (var item in reactionRoles)
+                    {
+                        ulong roleId;
+                        if (socketReaction.User.Value is SocketGuildUser member)
+                        {
+                            switch (item.Action)
+                            {
+                                case ReactionAction.GiveRemove:
+                                case ReactionAction.Give:
+                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out roleId))
+                                    {
+                                        var role = guild.GetRole(roleId);
+                                        if (role != null)
+                                        {
+                                            if (!member.Roles.Contains(role))
+                                            {
+                                                await member.AddRoleAsync(role);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case ReactionAction.Remove:
+                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out roleId))
+                                    {
+                                        var role = guild.GetRole(roleId);
+                                        if (role != null)
+                                        {
+                                            if (member.Roles.Contains(role))
+                                            {
+                                                await member.RemoveRoleAsync(role);
+                                            }
+                                        }
+                                    }
+                                    break;
+                                case ReactionAction.OneOfMany:
+                                    IEmote emote;
+                                    foreach (var kvp in item.Roles)
+                                    {
+                                        var role = guild.GetRole(kvp.Value);
+                                        if (role != null)
+                                        {
+                                            if (kvp.Key == socketReaction.Emote.ToString())
+                                            {
+                                                if (!member.Roles.Contains(role))
+                                                {
+                                                    await member.AddRoleAsync(role);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (member.Roles.Contains(role))
+                                                {
+                                                    await member.RemoveRoleAsync(role);
+                                                }
+
+                                                if (Emote.TryParse(kvp.Key, out Emote emoteTmp))
+                                                    emote = emoteTmp;
+                                                else
+                                                    emote = new Emoji(kvp.Key);
+                                                if (emote != null)
+                                                    await message.RemoveReactionAsync(emote, member);
+                                            }
+                                        }
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task Discord_ReactionRemoved(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
+        {
+            var guild = (socketMessageChannel as SocketTextChannel).Guild;
+            if (_git.Config.Servers[guild.Id].ReactionRoles.ContainsKey(socketMessageChannel.Id))
+            {
+                if (_git.Config.Servers[guild.Id].ReactionRoles[socketMessageChannel.Id].TryGetValue((await userCacheable.GetOrDownloadAsync()).Id, out var reactionRoles))
+                {
+                    foreach (var item in reactionRoles)
+                    {
+                        if (socketReaction.User.Value is SocketGuildUser member)
+                        {
+                            switch (item.Action)
+                            {
+                                case ReactionAction.GiveRemove:
+                                case ReactionAction.OneOfMany:
+                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out ulong roleId))
+                                    {
+                                        var role = guild.GetRole(roleId);
+                                        if (role != null)
+                                        {
+                                            if (member.Roles.Contains(role))
+                                            {
+                                                await member.RemoveRoleAsync(role);
+                                            }
+                                        }
+                                    }
+                                    break;
                             }
                         }
                     }
@@ -126,15 +243,15 @@ namespace DygBot.Services
 
                 try
                 {
-                    string roleId;
+                    ulong roleId;
 
                     switch (state)
                     {
                         case VcChangeState.Joined:
-                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(afterState.VoiceChannel.Id.ToString(), out roleId); // Try get role ID for channel
-                            if (!string.IsNullOrWhiteSpace(roleId))
+                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id].VcTextRole.TryGetValue(afterState.VoiceChannel.Id, out roleId); // Try get role ID for channel
+                            if (roleId != default)
                             {
-                                var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));  // Get role object
+                                var role = afterState.VoiceChannel.Guild.GetRole(roleId);  // Get role object
                                 if (role != null)
                                 {
                                     await user.AddRoleAsync(role, new RequestOptions { AuditLogReason = "Joined VC" }); // Add role
@@ -143,10 +260,10 @@ namespace DygBot.Services
                             break;
 
                         case VcChangeState.Left:
-                            _git.Config.Servers[beforeState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(beforeState.VoiceChannel.Id.ToString(), out roleId);
-                            if (!string.IsNullOrWhiteSpace(roleId))
+                            _git.Config.Servers[beforeState.VoiceChannel.Guild.Id].VcTextRole.TryGetValue(beforeState.VoiceChannel.Id, out roleId);
+                            if (roleId != default)
                             {
-                                var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
+                                var role = beforeState.VoiceChannel.Guild.GetRole(roleId);
                                 if (role != null)
                                 {
                                     await user.RemoveRoleAsync(role, new RequestOptions { AuditLogReason = "Left VC" });    // Remove role
@@ -155,20 +272,20 @@ namespace DygBot.Services
                             break;
 
                         case VcChangeState.Moved:
-                            _git.Config.Servers[beforeState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(beforeState.VoiceChannel.Id.ToString(), out roleId);
-                            if (!string.IsNullOrWhiteSpace(roleId))
+                            _git.Config.Servers[beforeState.VoiceChannel.Guild.Id].VcTextRole.TryGetValue(beforeState.VoiceChannel.Id, out roleId);
+                            if (roleId != default)
                             {
-                                var role = beforeState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
+                                var role = beforeState.VoiceChannel.Guild.GetRole(roleId);
                                 if (role != null)
                                 {
                                     await user.RemoveRoleAsync(role, new RequestOptions { AuditLogReason = "Left VC" });    // Remove role
                                 }
                             }
 
-                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id.ToString()].VcTextRole.TryGetValue(afterState.VoiceChannel.Id.ToString(), out roleId);
-                            if (!string.IsNullOrWhiteSpace(roleId))
+                            _git.Config.Servers[afterState.VoiceChannel.Guild.Id].VcTextRole.TryGetValue(afterState.VoiceChannel.Id, out roleId);
+                            if (roleId != default)
                             {
-                                var role = afterState.VoiceChannel.Guild.GetRole(ulong.Parse(roleId));
+                                var role = afterState.VoiceChannel.Guild.GetRole(roleId);
                                 if (role != null)
                                 {
                                     await user.AddRoleAsync(role, new RequestOptions { AuditLogReason = "Joined VC" }); // Add role
@@ -184,8 +301,8 @@ namespace DygBot.Services
 
         private async Task Discord_JoinedGuild(SocketGuild arg)
         {
-            var serverConfig = new ConfigClass.ServerConfigClass { Prefix = "db!" };    // Create new server config object
-            var guildId = arg.Id.ToString();    // Get the guild ID
+            var serverConfig = new ConfigClass.ServerConfigClass();    // Create new server config object
+            var guildId = arg.Id;    // Get the guild ID
             _git.Config.Servers[guildId] = serverConfig;    // Add server config to global config
             await _git.UploadConfig();  // Upload new config to GitHub
         }
@@ -200,7 +317,6 @@ namespace DygBot.Services
 
             var context = new SocketCommandContext(_discord, msg);     // Create the command context
             var guildId = context.Guild.Id;
-            var guildIdString = context.Guild.Id.ToString();  // Get guild ID
 
             if (_guildUniqueSenders.ContainsKey(guildId))
             {
@@ -209,7 +325,7 @@ namespace DygBot.Services
             else
                 _guildUniqueSenders[guildId] = new HashSet<ulong> { context.User.Id };
 
-            if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))
+            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))
             {
                 if (string.IsNullOrWhiteSpace(context.Message.Content))
                 {
@@ -219,9 +335,9 @@ namespace DygBot.Services
                 }
             }
 
-            if (_git.Config.Servers[guildIdString].AutoReact.ContainsKey(context.Channel.Id.ToString()))  // Check if channel is set to be auto reacted in
+            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))  // Check if channel is set to be auto reacted in
             {
-                var emotesString = _git.Config.Servers[guildIdString].AutoReact[context.Channel.Id.ToString()];   // Get strings of emotes
+                var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id];   // Get strings of emotes
                 List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
 
                 // Parse emotes
@@ -240,7 +356,7 @@ namespace DygBot.Services
                 }
                 await msg.AddReactionsAsync(emotes.ToArray());  // React with emotes
             }
-            string prefix = _git.Config.Servers[guildIdString]?.Prefix ?? "db!";
+            string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
 
             int argPos = 0;     // Check if the message has a valid command prefix
             if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
@@ -252,9 +368,9 @@ namespace DygBot.Services
                 {
                     commandStr = command.Name;
                 }
-                if (_git.Config.Servers[guildIdString].CommandLimit.ContainsKey(commandStr))
+                if (_git.Config.Servers[guildId].CommandLimit.ContainsKey(commandStr))
                 {
-                    if (_git.Config.Servers[guildIdString].CommandLimit[commandStr].Contains(context.Channel.Id.ToString()))
+                    if (_git.Config.Servers[guildId].CommandLimit[commandStr].Contains(context.Channel.Id))
                     {
                         executeCommand = true;
                     }
@@ -299,7 +415,6 @@ namespace DygBot.Services
             {
                 var dataMap = context.JobDetail.JobDataMap;
                 var client = (DiscordSocketClient)dataMap["Client"];
-                var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
                 var dbContext = (AppDbContext)dataMap["DbContext"];
                 var uniqueSenders = (Dictionary<ulong, List<ulong>>)dataMap["UniqueSendersDict"];

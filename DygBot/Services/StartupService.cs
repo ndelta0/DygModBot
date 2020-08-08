@@ -156,7 +156,7 @@ namespace DygBot.Services
             await _scheduler.ScheduleJob(detailStatsJob, detailStatsTrigger);
             await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
             await _scheduler.ScheduleJob(lockdownEndJob, lockdownEndTrigger);
-            await _scheduler.ScheduleJob(banWarnJob, banWarnTrigger);
+            //await _scheduler.ScheduleJob(banWarnJob, banWarnTrigger);
             await _scheduler.ScheduleJob(dbUpdateJob, dbUpdateTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service

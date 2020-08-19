@@ -20,16 +20,16 @@ namespace DygBot.Modules
         }
 
         [Command("")]
-        [Summary("Shows all available commands")]
+        [Summary("Pokazuje wszystkie dostępne komendy")]
         [Alias("commands")]
         public async Task HelpAsync()
         {
             string prefix = _git.Config.Servers[Context.Guild.Id].Prefix;    // Get prefix for server
             var builder = new EmbedBuilder()    // Create an embed
             {
-                Color = Color.Green,    // Set color
-                Title = "HELP", // Set title
-                Description = $"For more information about a command send __{prefix}help **command**__" // Set description
+                Color = new Color(0xFF66CC),    // Set color
+                Title = "POMOC", // Set title
+                Description = $"Więcej informacji o komendzie: __{prefix}help **komenda**__" // Set description
             };
 
             foreach (var module in _service.Modules)
@@ -66,14 +66,14 @@ namespace DygBot.Modules
                     var name = module.IsSubmodule ? "\t" : string.Empty;
                     builder.AddField(x =>
                     {
-                        x.Name = name + (module.Summary ?? module.Group);
+                        x.Name = name + ((module.Summary ?? module.Group) ?? module.Name);
                         x.Value = description;
                         x.IsInline = false;
                     });
                 }
 
                 var footerBuilder = new EmbedFooterBuilder()
-                    .WithText("*-Multiple Value Parameter\n^-Remainder Parameter\n[OPTIONAL PARAMETER]\n{REQUIRED PARAMETER}");
+                    .WithText("*-Kilka wartości\n^-Parametr bez końca\n[OPCJONANE]\n{WYMAGANE}");
 
                 builder.WithFooter(footerBuilder);
                 builder.WithCurrentTimestamp();
@@ -83,20 +83,20 @@ namespace DygBot.Modules
         }
 
         [Command("")]
-        [Summary("Shows details about a command")]
-        public async Task HelpAsync([Summary("Command you want to know about")][Remainder] string command)
+        [Summary("Pokazuje szczegóły komendy")]
+        public async Task HelpAsync([Summary("Komenda")][Remainder] string command)
         {
             var result = _service.Search(Context, command);
 
             if (!result.IsSuccess)
             {
-                await ReplyAsync($"Sorry, I don't have a command like **{command}**.");
+                await ReplyAsync($"Nie mam komendy **{command}**.");
                 return;
             }
             var builder = new EmbedBuilder()
             {
-                Color = Color.Green,
-                Description = $"Here are some commands like **{command}**"
+                Color = new Color(0xFF66CC),
+                Description = $"Komendy odpowiadające **{command}**"
             };
 
             foreach (var match in result.Commands)
@@ -118,24 +118,24 @@ namespace DygBot.Modules
                         paramDesc += "^";
                     paramDesc += param.Name;
                     if (param.DefaultValue != null)
-                        paramDesc += $"={param.DefaultValue}";
+                        paramDesc += $"='{param.DefaultValue}'";
                     if (param.IsOptional)
                         paramDesc += "]";
                     else
                         paramDesc += "}";
-                    paramDesc += $" - {param.Summary ?? "No summary"}";
+                    paramDesc += $" - {param.Summary ?? "brak opisu"}";
                     paramString += paramDesc + "\n";
                 }
 
-                string fullDesc = $"**Summary**: {cmd.Summary}";
+                string fullDesc = $"**Opis**: {cmd.Summary}";
 
                 if (paramString == "")
                 {
-                    fullDesc += "\n**No parameters**";
+                    fullDesc += "\n**Brak parametrów**";
                 }
                 else
                 {
-                    fullDesc += $"\n**Parameters**:\n" + paramString;
+                    fullDesc += $"\n**Parametry**:\n" + paramString;
                 }
 
                 string names = "";
@@ -156,7 +156,7 @@ namespace DygBot.Modules
             }
 
             var footerBuilder = new EmbedFooterBuilder()
-                    .WithText("*-Multiple Value Parameter\n^-Remainder Parameter\n[OPTIONAL PARAMETER]\n{REQUIRED PARAMETER}");
+                    .WithText("*-Kilka wartości\n^-Parametr bez końca\n[OPCJONANE]\n{WYMAGANE}");
 
             builder.WithFooter(footerBuilder);
             builder.WithCurrentTimestamp();

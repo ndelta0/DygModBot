@@ -112,6 +112,7 @@ namespace DygBot.Services
                 public Dictionary<string, List<ulong>> CommandLimit { get; set; } = new Dictionary<string, List<ulong>>();
                 public ulong NotificationChannelId { get; set; } = default;
                 public Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>> ReactionRoles { get; set; } = new Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>>();
+                public Dictionary<string, HashSet<ulong>> AllowedReactions { get; set; } = new Dictionary<string, HashSet<ulong>>();
             }
             public string DiscordToken { get; set; }
             public Dictionary<ulong, ServerConfigClass> Servers { get; set; }

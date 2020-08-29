@@ -20,20 +20,14 @@ namespace DygBot.Services
         private readonly CommandService _commands;
         private readonly IServiceProvider _provider;
         private readonly GitHubService _git;
-        private readonly AppDbContext _dbContext;
-        private readonly IScheduler _scheduler;
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
-
-        private readonly Dictionary<ulong, HashSet<ulong>> _guildUniqueSenders = new Dictionary<ulong, HashSet<ulong>>();
 
         public CommandHandler(
             DiscordSocketClient discord,
             CommandService commands,
             IServiceProvider provider,
             GitHubService git,
-            AppDbContext dbContext,
-            IScheduler scheduler,
             LoggingService logging,
             InteractiveService interactiveService)
         {
@@ -41,8 +35,6 @@ namespace DygBot.Services
             _commands = commands;
             _provider = provider;
             _git = git;
-            _dbContext = dbContext;
-            _scheduler = scheduler;
             _logging = logging;
             _interactive = interactiveService;
 
@@ -58,74 +50,49 @@ namespace DygBot.Services
             _commands.AddTypeReader<TimeSpan>(new CustomTimeSpanTypeReader(), true);
             _commands.AddTypeReader<IEmote>(new IEmoteTypeReader());
             _commands.AddTypeReader<IMessage>(new IMessageTypeReader());
-
-            var defaultJobDataMap = new JobDataMap()
-            {
-                {"Client", _discord },
-                {"GitHub", _git },
-                {"Logging", _logging },
-                {"DbContext", _dbContext },
-                {"UniqueSendersDict", _guildUniqueSenders }
-            };
-
-            IJobDetail generalStatsJob = JobBuilder.Create<GeneralStatsJob>()
-                .WithIdentity("generalStatsJob", "discordGroup")
-                .UsingJobData(defaultJobDataMap)
-                .Build();
-            ITrigger generalStatsTrigger = TriggerBuilder.Create()
-                .WithIdentity("generalStatsTrigger", "discordGroup")
-                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
-                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(1))
-                .WithCronSchedule("0 1 22 1/1 * ? *")
-                .StartNow()
-                .Build();
-
-            _scheduler.ScheduleJob(generalStatsJob, generalStatsTrigger).Wait();
         }
 
         
 
-        private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
+        private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction sockReaction)
         {
-            if (socketReaction.UserId == _discord.CurrentUser.Id)
+            // Return if reaction is from self
+            var user = sockReaction.User.GetValueOrDefault();
+            if (user.Id == _discord.CurrentUser.Id || user.IsBot)
                 return;
 
-            if (socketMessageChannel.Id != 719251462697517227)
+
+            // Initialize used variables
+            var channel = socketMessageChannel as SocketTextChannel;
+            var guild = channel.Guild;
+            var message = await userCacheable.GetOrDownloadAsync();
+
+
+            // Check reaction limits
+            if (_git.Config.Servers[guild.Id].AllowedReactions.TryGetValue(sockReaction.Emote.ToString(), out HashSet<ulong> channels))
             {
-                if (socketReaction.Emote.Equals(Emote.Parse("<:rzyg:719249995064279112>")))
+                if (!channels.Contains(channel.Id))
                 {
-                    if (socketReaction.User.IsSpecified)
-                    {
-                        if (socketReaction.User.Value is SocketGuildUser user)
-                        {
-                            if (!user.Roles.Any(x => x.Id == 683095642800652375 || x.Id == 683095728402596006))
-                            {
-                                if ((await userCacheable.GetOrDownloadAsync()) is SocketUserMessage message)
-                                {
-                                    await message.RemoveReactionAsync(Emote.Parse("<:rzyg:719249995064279112>"), user);
-                                }
-                            }
-                        }
-                    }
+                    await message.RemoveReactionAsync(sockReaction.Emote, user);
                 }
             }
 
-            var guild = (socketMessageChannel as SocketTextChannel).Guild;
-            if (_git.Config.Servers[guild.Id].ReactionRoles.ContainsKey(socketMessageChannel.Id))
+
+            // Reaction roles
+            if (user is SocketGuildUser member)
             {
-                var message = await userCacheable.GetOrDownloadAsync();
-                if (_git.Config.Servers[guild.Id].ReactionRoles[socketMessageChannel.Id].TryGetValue(message.Id, out var reactionRoles))
+                if (_git.Config.Servers[guild.Id].ReactionRoles.TryGetValue(channel.Id, out var rrDict))
                 {
-                    foreach (var item in reactionRoles)
+                    if (rrDict.TryGetValue(message.Id, out var reactionRoles))
                     {
-                        ulong roleId;
-                        if (socketReaction.User.Value is SocketGuildUser member)
+                        foreach (var reaction in reactionRoles)
                         {
-                            switch (item.Action)
+                            ulong roleId;
+                            switch (reaction.Action)
                             {
                                 case ReactionAction.GiveRemove:
                                 case ReactionAction.Give:
-                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out roleId))
+                                    if(reaction.Roles.TryGetValue(sockReaction.Emote.ToString(), out roleId))
                                     {
                                         var role = guild.GetRole(roleId);
                                         if (role != null)
@@ -137,8 +104,9 @@ namespace DygBot.Services
                                         }
                                     }
                                     break;
+
                                 case ReactionAction.Remove:
-                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out roleId))
+                                    if (reaction.Roles.TryGetValue(sockReaction.Emote.ToString(), out roleId))
                                     {
                                         var role = guild.GetRole(roleId);
                                         if (role != null)
@@ -150,14 +118,15 @@ namespace DygBot.Services
                                         }
                                     }
                                     break;
+
                                 case ReactionAction.OneOfMany:
                                     IEmote emote;
-                                    foreach (var kvp in item.Roles)
+                                    foreach (var kvp in reaction.Roles)
                                     {
                                         var role = guild.GetRole(kvp.Value);
                                         if (role != null)
                                         {
-                                            if (kvp.Key == socketReaction.Emote.ToString())
+                                            if (kvp.Key == sockReaction.Emote.ToString())
                                             {
                                                 if (!member.Roles.Contains(role))
                                                 {
@@ -188,25 +157,34 @@ namespace DygBot.Services
             }
         }
 
-        private async Task Discord_ReactionRemoved(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction socketReaction)
+        private async Task Discord_ReactionRemoved(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction sockReaction)
         {
-            if (socketReaction.UserId == _discord.CurrentUser.Id)
+            // Return if reaction is from self
+            var user = sockReaction.User.GetValueOrDefault();
+            if (user.Id == _discord.CurrentUser.Id || user.IsBot)
                 return;
 
-            var guild = (socketMessageChannel as SocketTextChannel).Guild;
-            if (_git.Config.Servers[guild.Id].ReactionRoles.ContainsKey(socketMessageChannel.Id))
+
+            // Initialize used variables
+            var channel = socketMessageChannel as SocketTextChannel;
+            var guild = channel.Guild;
+            var message = await userCacheable.GetOrDownloadAsync();
+
+
+            // Reaction roles
+            if (user is SocketGuildUser member)
             {
-                if (_git.Config.Servers[guild.Id].ReactionRoles[socketMessageChannel.Id].TryGetValue((await userCacheable.GetOrDownloadAsync()).Id, out var reactionRoles))
+                if (_git.Config.Servers[guild.Id].ReactionRoles.TryGetValue(socketMessageChannel.Id, out var rrDict))
                 {
-                    foreach (var item in reactionRoles)
+                    if (rrDict.TryGetValue(message.Id, out var reactionRoles))
                     {
-                        if (socketReaction.User.Value is SocketGuildUser member)
+                        foreach (var item in reactionRoles)
                         {
                             switch (item.Action)
                             {
                                 case ReactionAction.GiveRemove:
                                 case ReactionAction.OneOfMany:
-                                    if (item.Roles.TryGetValue(socketReaction.Emote.ToString(), out ulong roleId))
+                                    if (item.Roles.TryGetValue(sockReaction.Emote.ToString(), out ulong roleId))
                                     {
                                         var role = guild.GetRole(roleId);
                                         if (role != null)
@@ -324,13 +302,6 @@ namespace DygBot.Services
             var context = new SocketCommandContext(_discord, msg);     // Create the command context
             var guildId = context.Guild.Id;
 
-            if (_guildUniqueSenders.ContainsKey(guildId))
-            {
-                 _guildUniqueSenders[guildId].Add(context.User.Id);
-            }
-            else
-                _guildUniqueSenders[guildId] = new HashSet<ulong> { context.User.Id };
-
             if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))
             {
                 if (string.IsNullOrWhiteSpace(context.Message.Content))
@@ -411,47 +382,6 @@ namespace DygBot.Services
                                     break;
                             }
                     }
-                }
-            }
-        }
-
-        public class GeneralStatsJob : IJob
-        {
-            public async Task Execute(IJobExecutionContext context)
-            {
-                var dataMap = context.JobDetail.JobDataMap;
-                var client = (DiscordSocketClient)dataMap["Client"];
-                var logging = (LoggingService)dataMap["Logging"];
-                var dbContext = (AppDbContext)dataMap["DbContext"];
-                var uniqueSenders = (Dictionary<ulong, List<ulong>>)dataMap["UniqueSendersDict"];
-
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating general statistics"));
-
-                try
-                {
-                    var today = DateTime.UtcNow.Date;
-
-                    var additions = new List<GeneralStat>(client.Guilds.Count);
-
-                    foreach (var guild in client.Guilds)
-                    {
-                        var stats = new GeneralStat
-                        {
-                            DateTime = today,
-                            UniqueSenders = uniqueSenders.ContainsKey(guild.Id) ? uniqueSenders[guild.Id].Count : 0
-                        };
-                        additions.Add(stats);
-                    }
-                    await dbContext.GeneralStats.AddRangeAsync(additions);
-                    await dbContext.SaveChangesAsync();
-                }
-                catch (Exception ex)
-                {
-                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "General statistics error", ex));
-                }
-                finally
-                {
-                    uniqueSenders.Clear();
                 }
             }
         }

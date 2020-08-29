@@ -17,16 +17,12 @@ namespace DygBot.Modules
     [Summary("Commands made to be used by members")]
     public class FunModule : InteractiveBase<SocketCommandContext>
     {
-        private readonly GitHubService _git;
         private readonly HttpClient _http;
-        private readonly InteractiveService _interactive;
         private readonly LoggingService _logging;
 
-        public FunModule(GitHubService git, HttpClient http, InteractiveService interactive, LoggingService logging)
+        public FunModule(HttpClient http, LoggingService logging)
         {
-            _git = git;
             _http = http;
-            _interactive = interactive;
             _logging = logging;
         }
 
@@ -208,6 +204,22 @@ namespace DygBot.Modules
             }
         }
 
+        [Command("rate")]
+        [Summary("Zareaguj na wiadomość emotkami 1-5")]
+        public async Task RateAsync()
+        {
+            var reactions = new IEmote[]
+            {
+                new Emoji("1️⃣"),
+                new Emoji("2️⃣"),
+                new Emoji("3️⃣"),
+                new Emoji("4️⃣"),
+                new Emoji("5️⃣")
+            };
+            await Context.Message.AddReactionsAsync(reactions);
+        }
+
+
         private bool IsValidImage(Uri imagePath)
         {
             var validExtensions = new string[] { "jpeg", "jpg", "png", "webp", "bmp", "tiff" };
@@ -217,7 +229,6 @@ namespace DygBot.Modules
         private async Task<Image<Rgba32>> DownloadImage(Uri imagePath)
         {
             var response = await _http.GetAsync(imagePath);
-            var content = await response.Content.ReadAsStringAsync();
             response.EnsureSuccessStatusCode();
             Image<Rgba32> image = (Image<Rgba32>)SixLabors.ImageSharp.Image.Load(await response.Content.ReadAsStreamAsync());
             return image;

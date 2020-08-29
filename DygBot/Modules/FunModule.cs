@@ -206,7 +206,7 @@ namespace DygBot.Modules
 
         [Command("rate")]
         [Summary("Zareaguj na wiadomość emotkami 1-5")]
-        public async Task RateAsync(object anything)
+        public async Task RateAsync(object anything=null)
         {
             var reactions = new IEmote[]
             {

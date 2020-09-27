@@ -8,6 +8,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -206,7 +207,7 @@ namespace DygBot.Modules
 
         [Command("rate")]
         [Summary("Zareaguj na wiadomość emotkami 1-5")]
-        public async Task RateAsync(object anything=null)
+        public async Task RateAsync([Remainder]object anything=null)
         {
             var reactions = new IEmote[]
             {
@@ -218,7 +219,36 @@ namespace DygBot.Modules
             };
             await Context.Message.AddReactionsAsync(reactions);
         }
-
+        
+        [Command("8ball")]
+        [Summary("Odpowiada na pytanie zamknięte")]
+        public async Task AnswerAsync([Remainder]object anything = null)
+        {
+            string[] possibleAnswers =
+            {
+                "🟢 To jest pewne",
+                "🟢 Zdecydowanie tak",
+                "🟢 Bez wątpienia",
+                "🟢 Tak - zdecydowanie",
+                "🟢 Najprawdopodobniej",
+                "🟢 Tak",
+                "🟢 Jak dla mnie tak",
+                "🟢 Wszystkie znaki wskazują na tak",
+                "🟡 Zapytaj ponownie później",
+                "🟡 Lepiej ci teraz nie mówić",
+                "🟡 Skoncentruj się i zapytaj ponownie",
+                "🟡 Tego nie wiem",
+                "🔴 Nie licz na to",
+                "🔴 Moja odpowiedź brzmi nie",
+                "🔴 Moje źródła mówią, że nie",
+                "🔴 Perspektywy nie są zbyt dobre",
+                "🔴 Bardzo wątpliwe"
+            };
+            if (anything != null)
+                await ReplyAsync(possibleAnswers.Random(anything.GetHashCode()));
+            else
+                await ReplyAsync(possibleAnswers.Random());
+        }
 
         private bool IsValidImage(Uri imagePath)
         {

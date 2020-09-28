@@ -261,7 +261,7 @@ namespace DygBot.Modules
 
             if (lastMessage)
             {
-                var lastMsg = (SocketUserMessage)Context.Channel.CachedMessages.First(x => x.Author == Context.Message.Author);
+                var lastMsg = (await Context.Channel.GetMessagesAsync().FlattenAsync()).First(x => x.Author == Context.Message.Author) as SocketUserMessage;
                 await Context.Message.DeleteAsync();
                 await lastMsg.AddReactionsAsync(emotes);
             }

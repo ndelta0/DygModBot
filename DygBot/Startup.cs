@@ -8,6 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Quartz;
 using Quartz.Impl;
+
+using Reddit;
+
 using System;
 using System.Collections.Specialized;
 using System.Net.Http;
@@ -59,10 +62,17 @@ namespace DygBot
                 .AddSingleton<HttpClient>() // Add the HttpClient to the collection
                 .AddSingleton<GitHubService>()  // Add the GitHub service to the collection
                 .AddSingleton<CommandHandler>() // Add the command handler to the collection
-                .AddSingleton<StartupService>() // Add the startup service to the collection
                 .AddSingleton<LoggingService>() // Add the logging service to the collection
                 .AddSingleton<Random>()      // Add random to the collection
-                .AddSingleton<InteractiveService>();
+                .AddSingleton<InteractiveService>()
+                .AddSingleton(prov =>
+                {
+                    var git = prov.GetRequiredService<GitHubService>();
+                    git.DownloadConfig().Wait();
+                    var config = git.Config;
+                    return new RedditClient(config.RedditAppId, config.RedditAppRefreshToken, config.RedditAppSecret, userAgent: "DygModBot by D3LT4PL/1.0");
+                })
+                .AddSingleton<StartupService>(); // Add the startup service to the collection
         }
 
         private static string GetMySqlConnectionString()

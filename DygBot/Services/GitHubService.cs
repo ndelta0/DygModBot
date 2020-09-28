@@ -1,4 +1,7 @@
 ﻿using Discord;
+
+using DygBot.Models;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System;
@@ -113,8 +116,13 @@ namespace DygBot.Services
                 public ulong NotificationChannelId { get; set; } = default;
                 public Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>> ReactionRoles { get; set; } = new Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>>();
                 public Dictionary<string, HashSet<ulong>> AllowedReactions { get; set; } = new Dictionary<string, HashSet<ulong>>();
+                public Dictionary<ulong, Gender> HalfAnHourConfig { get; set; } = new Dictionary<ulong, Gender>();
+
             }
             public string DiscordToken { get; set; }
+            public string RedditAppId { get; set; }
+            public string RedditAppSecret { get; set; }
+            public string RedditAppRefreshToken { get; set; }
             public Dictionary<ulong, ServerConfigClass> Servers { get; set; }
         }
 

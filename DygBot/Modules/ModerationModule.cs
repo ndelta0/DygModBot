@@ -5,6 +5,13 @@ using Discord.WebSocket;
 using DygBot.Models;
 using DygBot.Preconditions;
 using DygBot.Services;
+using DygBot.TypeReaders;
+
+using Reddit;
+using Reddit.Controllers;
+
+using SixLabors.ImageSharp.ColorSpaces;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -61,7 +68,7 @@ namespace DygBot.Modules
         //[Command("test")]
         //[Summary("test")]
         //[RequireUser(312223735505747968)]
-        //public async Task TestAsync(IEmote emote)
+        //public async Task TestAsync()
         //{
         //}
 
@@ -802,6 +809,65 @@ namespace DygBot.Modules
                     return;
                 }
                 await ReplyAsync("Ograniczenia dla tej emotki nie są ustawione");
+            }
+        }
+
+        [Group("halfanhour")]
+        [Alias("hah")]
+        public class HalfAnHourClass : InteractiveBase<SocketCommandContext>
+        {
+            private readonly GitHubService _git;
+
+            public HalfAnHourClass(GitHubService git)
+            {
+                _git = git;
+            }
+
+            [Command()]
+            public async Task SetHalfAnHourChannel(ITextChannel channel, params Gender[] genders)
+            {
+                Gender resultGender = Gender.None;
+
+                foreach (var gender in genders)
+                {
+                    resultGender |= gender;
+                }
+
+                if (resultGender == Gender.None)
+                {
+                    await ReplyAsync("No genders selected");
+                    return;
+                }
+
+                if (_git.Config.Servers.TryGetValue(Context.Guild.Id, out var serverConfig))
+                {
+                    if (serverConfig.HalfAnHourConfig.ContainsKey(channel.Id))
+                    {
+                        serverConfig.HalfAnHourConfig[channel.Id] = resultGender;
+                    }
+                    else
+                        serverConfig.HalfAnHourConfig.Add(channel.Id, resultGender);
+                    await _git.UploadConfig();
+                    await ReplyAsync($"Added channel {channel.Mention} to half-an-hour ({resultGender})");
+                }
+            }
+
+            [Command("clear")]
+            public async Task ClearHalfAnHour(ITextChannel channel)
+            {
+                if (_git.Config.Servers.TryGetValue(Context.Guild.Id, out var serverConfig))
+                {
+                    if (serverConfig.HalfAnHourConfig.ContainsKey(channel.Id))
+                    {
+                        serverConfig.HalfAnHourConfig.Remove(channel.Id);
+                        await _git.UploadConfig();
+                        await ReplyAsync($"Removed channel {channel.Mention} from half-an-hour");
+                    }
+                    else
+                    {
+                        await ReplyAsync("Channel not in half-an-hour");
+                    }
+                }
             }
         }
     }

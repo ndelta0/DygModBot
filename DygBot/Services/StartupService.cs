@@ -5,11 +5,16 @@ using Discord.WebSocket;
 using DygBot.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+
+using Reddit;
+using Reddit.Controllers;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace DygBot.Services
@@ -22,6 +27,7 @@ namespace DygBot.Services
         private readonly GitHubService _gitHub;
         private readonly LoggingService _logging;
         private readonly IScheduler _scheduler;
+        private readonly RedditClient _reddit;
 
         public StartupService(
             IServiceProvider provider,
@@ -29,7 +35,8 @@ namespace DygBot.Services
             CommandService commands,
             GitHubService gitHub,
             LoggingService logging,
-            IScheduler scheduler)
+            IScheduler scheduler,
+            RedditClient reddit)
         {
             _provider = provider;
             _discord = discord;
@@ -37,6 +44,7 @@ namespace DygBot.Services
             _gitHub = gitHub;
             _logging = logging;
             _scheduler = scheduler;
+            _reddit = reddit;
         }
 
         public async Task StartAsync()
@@ -61,7 +69,8 @@ namespace DygBot.Services
             {
                 {"Client", _discord },
                 {"GitHub", _gitHub },
-                {"Logging", _logging }
+                {"Logging", _logging },
+                {"Reddit", _reddit }
             };
 
             // Create job for updating counters
@@ -114,11 +123,24 @@ namespace DygBot.Services
                 .StartNow()
                 .Build();
 
+            IJobDetail halfAnHourJob = JobBuilder.Create<HalfAnHourJob>()
+                .WithIdentity("halfAnHourJob", "discordGroup")
+                .UsingJobData(defaultJobDataMap)
+                .Build();
+            ITrigger halfAnHourTrigger = TriggerBuilder.Create()
+                .WithIdentity("halfAnHourTrigger", "discordGroup")
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                .WithCronSchedule("0 0/30 * 1/1 * ? *")
+                .StartNow()
+                .Build();
+
             // Schedule jobs
             await _scheduler.ScheduleJob(countersJob, countersTrigger);
             await _scheduler.ScheduleJob(clearJob, clearTrigger);
             await _scheduler.ScheduleJob(lockdownBeginJob, lockdownBeginTrigger);
             await _scheduler.ScheduleJob(lockdownEndJob, lockdownEndTrigger);
+            await _scheduler.ScheduleJob(halfAnHourJob, halfAnHourTrigger);
 
             await _commands.AddModulesAsync(Assembly.GetExecutingAssembly(), _provider); // Load commands and modules into the command service
         }
@@ -251,6 +273,123 @@ namespace DygBot.Services
                 catch (Exception ex)
                 {
                     await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown end error", ex));
+                }
+            }
+        }
+        public class HalfAnHourJob : IJob
+        {
+            private readonly SubredditSource[] sources =
+            {
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "gonewild",
+                    PostPredicate = (Post post) => post.Listing.AuthorFlairText == "verified" && new Regex(@"[(\[][0-9]*[Ff][0-9]*[)\]]").IsMatch(post.Title)
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Male,
+                    SubredditName = "gonewild",
+                    PostPredicate = (Post post) => post.Listing.AuthorFlairText == "verified" && new Regex(@"[(\[][0-9]*[Mm][0-9]*[)\]]").IsMatch(post.Title)
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "altgonewild",
+                    PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "RealGirls",
+                    PostPredicate = (Post post) => post.Listing.LinkFlairText == "Original Content"
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "BDSMGW",
+                    PostPredicate = (Post post) => new Regex(@"[(\[][0-9]*[Ff][0-9]*[)\]]").IsMatch(post.Title)
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "gwpublic",
+                    PostPredicate = (Post post) => new Regex(@"[(\[][0-9]*[Ff][0-9]*[)\]]").IsMatch(post.Title)
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "GWNerdy",
+                    PostPredicate = (Post post) => new Regex(@"[(\[][0-9]*[Ff][0-9]*[)\]]").IsMatch(post.Title)
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "OnOff",
+                    PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "GoneWildPetite",
+                    PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "Gonewild18",
+                    PostPredicate = (Post post) => post.Listing.LinkFlairText == "Original Content"
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "Nudes",
+                    PostPredicate = (Post post) => post.Listing.LinkFlairText == "Female"
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Male,
+                    SubredditName = "mangonewild",
+                    PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Male,
+                    SubredditName = "twinks",
+                    PostPredicate = (Post post) => true
+                }
+            };
+            private readonly Random _random = new Random();
+            private Color RandomColor => new Color(_random.Next(256), _random.Next(256), _random.Next(256));
+
+            public async Task Execute(IJobExecutionContext context)
+            {
+                var dataMap = context.JobDetail.JobDataMap;
+                var client = (DiscordSocketClient)dataMap["Client"];
+                var git = (GitHubService)dataMap["GitHub"];
+                var logging = (LoggingService)dataMap["Logging"];
+                var reddit = (RedditClient)dataMap["Reddit"];
+
+                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Sending half-an-hour"));
+
+                foreach (var guild in git.Config.Servers)
+                {
+                    foreach (var config in guild.Value.HalfAnHourConfig)
+                    {
+                        var source = sources.Where(x => x.Gender.HasFlag(config.Value)).Random();
+                        var list = reddit.Subreddit(source.SubredditName).Posts.GetTop("hour").Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
+                        if (list.Count() == 0)
+                            list = reddit.Subreddit(source.SubredditName).Posts.GetNew().Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
+                        var post = (LinkPost)list.Random();
+                        var embed = new EmbedBuilder()
+                            .WithTitle(post.Title)
+                            .WithUrl($"https://reddit.com{post.Permalink}")
+                            .WithColor(RandomColor)
+                            .WithFooter($"r/{source.SubredditName}")
+                            .WithImageUrl(post.URL)
+                            .Build();
+                        await client.GetGuild(guild.Key).GetTextChannel(config.Key).SendMessageAsync(embed: embed);
+                    }
                 }
             }
         }

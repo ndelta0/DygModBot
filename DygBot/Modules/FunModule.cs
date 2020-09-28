@@ -251,7 +251,7 @@ namespace DygBot.Modules
 
         [Command("poll")]
         [Summary("Reaguje wiadomościami w górę i w dół")]
-        public async Task PollAsync(bool lastMessage = false)
+        public async Task PollAsync()
         {
             IEmote[] emotes =
             {
@@ -259,16 +259,7 @@ namespace DygBot.Modules
                 new Emoji("🔻")
             };
 
-            if (lastMessage)
-            {
-                var lastMsg = (await Context.Channel.GetMessagesAsync().FlattenAsync()).First(x => x.Author == Context.Message.Author) as SocketUserMessage;
-                await Context.Message.DeleteAsync();
-                await lastMsg.AddReactionsAsync(emotes);
-            }
-            else
-            {
-                await Context.Message.AddReactionsAsync(emotes);
-            }
+            await Context.Message.AddReactionsAsync(emotes);
         }
 
         private bool IsValidImage(Uri imagePath)

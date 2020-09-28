@@ -357,6 +357,18 @@ namespace DygBot.Services
                     Gender = Gender.Male,
                     SubredditName = "twinks",
                     PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Female,
+                    SubredditName = "Nude_Selfie",
+                    PostPredicate = (Post post) => true
+                },
+                new SubredditSource
+                {
+                    Gender = Gender.Other,
+                    SubredditName = "GoneWildTrans",
+                    PostPredicate = (Post post) => true
                 }
             };
             private readonly Random _random = new Random();

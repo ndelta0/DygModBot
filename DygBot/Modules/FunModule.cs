@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.WebSocket;
+
 using DygBot.Services;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
@@ -205,9 +207,9 @@ namespace DygBot.Modules
             }
         }
 
-        [Command("rate")]
+        [Command("rate", true)]
         [Summary("Zareaguj na wiadomość emotkami 1-5")]
-        public async Task RateAsync([Remainder]object anything=null)
+        public async Task RateAsync()
         {
             var reactions = new IEmote[]
             {
@@ -220,9 +222,9 @@ namespace DygBot.Modules
             await Context.Message.AddReactionsAsync(reactions);
         }
         
-        [Command("8ball")]
+        [Command("8ball", true)]
         [Summary("Odpowiada na pytanie zamknięte")]
-        public async Task AnswerAsync([Remainder]object anything = null)
+        public async Task AnswerAsync()
         {
             string[] possibleAnswers =
             {
@@ -244,10 +246,29 @@ namespace DygBot.Modules
                 "🔴 Perspektywy nie są zbyt dobre",
                 "🔴 Bardzo wątpliwe"
             };
-            if (anything != null)
-                await ReplyAsync(possibleAnswers.Random(anything.GetHashCode()));
+            await ReplyAsync(possibleAnswers.Random());
+        }
+
+        [Command("poll")]
+        [Summary("Reaguje wiadomościami w górę i w dół")]
+        public async Task PollAsync(bool lastMessage = false)
+        {
+            IEmote[] emotes =
+            {
+                new Emoji("🔺"),
+                new Emoji("🔻")
+            };
+
+            if (lastMessage)
+            {
+                var lastMsg = (SocketUserMessage)Context.Channel.CachedMessages.First(x => x.Author == Context.Message.Author);
+                await Context.Message.DeleteAsync();
+                await lastMsg.AddReactionsAsync(emotes);
+            }
             else
-                await ReplyAsync(possibleAnswers.Random());
+            {
+                await Context.Message.AddReactionsAsync(emotes);
+            }
         }
 
         private bool IsValidImage(Uri imagePath)

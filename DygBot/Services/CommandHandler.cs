@@ -67,6 +67,26 @@ namespace DygBot.Services
             var guild = channel.Guild;
             var message = await userCacheable.GetOrDownloadAsync();
 
+            // Check if underage was selected
+            if (sockReaction.Emote.ToString() == "🚫" && channel.Id == 737304061862477834 && guild.Id == 683084560451633212)
+            {
+                var inviteLink = await guild.DefaultChannel.CreateInviteAsync(null, null, false, false);
+                var dmChannel = await user.GetOrCreateDMChannelAsync();
+                await dmChannel.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("**Szanowny użytkowniku!**")
+                    .WithDescription($"Dygawka jest serwerem z zawartością nieodpowiednią dla nieletnich. Deklarując się jako osoba poniżej 18ego roku życia, Twoje konto zostało usunięte z listy dygaczy. Nie martw się, __nie zostało zbanowane__. Jeśli wybór roli *Underage* był efektem pomyłki, możesz nadal dołączyć do grona naszych użytkowników potwierdzając swoją pełnoletniość na mocy punktu nr 15 w naszym regulaminie. Jeśli zaś jesteś osobą nieletnią, zapraszamy na nasz serwer w przyszłości!\n\nMożesz dołączyć na serwer ponownie **[klikając w ten link]({inviteLink.Url})**")
+                    .WithColor(new Color(0xFF277F))
+                    .Build());
+                await guild.GetTextChannel(708805642349051984).SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("Osoba niepełnoletnia")
+                    .WithDescription($"**{user.Username}#{user.Discriminator}** ({user.Id}) wybrał rolę *Underage*")
+                    .WithColor(new Color(0xFF277F))
+                    .Build());
+                await message.RemoveReactionAsync(sockReaction.Emote, user);
+                await (user as SocketGuildUser).KickAsync();
+                return;
+            }
+
 
             // Check reaction limits
             if (_git.Config.Servers[guild.Id].AllowedReactions.TryGetValue(sockReaction.Emote.ToString(), out HashSet<ulong> channels))

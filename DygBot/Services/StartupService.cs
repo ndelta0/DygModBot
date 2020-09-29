@@ -12,9 +12,7 @@ using Reddit.Controllers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -30,7 +28,6 @@ namespace DygBot.Services
         private readonly LoggingService _logging;
         private readonly IScheduler _scheduler;
         private readonly RedditClient _reddit;
-        private readonly HttpClient _http;
 
         public StartupService(
             IServiceProvider provider,
@@ -39,8 +36,7 @@ namespace DygBot.Services
             GitHubService gitHub,
             LoggingService logging,
             IScheduler scheduler,
-            RedditClient reddit,
-            HttpClient http)
+            RedditClient reddit)
         {
             _provider = provider;
             _discord = discord;
@@ -49,7 +45,6 @@ namespace DygBot.Services
             _logging = logging;
             _scheduler = scheduler;
             _reddit = reddit;
-            _http = http;
         }
 
         public async Task StartAsync()
@@ -75,8 +70,7 @@ namespace DygBot.Services
                 {"Client", _discord },
                 {"GitHub", _gitHub },
                 {"Logging", _logging },
-                {"Reddit", _reddit },
-                {"HttpClient", _http }
+                {"Reddit", _reddit }
             };
 
             // Create job for updating counters
@@ -379,15 +373,6 @@ namespace DygBot.Services
             };
             private readonly Random _random = new Random();
             private Color RandomColor => new Color(_random.Next(256), _random.Next(256), _random.Next(256));
-            private HttpClient _http = null;
-            private async Task<string> DownloadImage(Uri imagePath)
-            {
-                var response = await _http.GetAsync(imagePath);
-                response.EnsureSuccessStatusCode();
-                var path = $"tmp_img.{imagePath.LocalPath.Split('.').Last()}";
-                await File.WriteAllBytesAsync(path, await response.Content.ReadAsByteArrayAsync());
-                return path;
-            }
 
             public async Task Execute(IJobExecutionContext context)
             {
@@ -396,7 +381,6 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
                 var reddit = (RedditClient)dataMap["Reddit"];
-                _http = (HttpClient)dataMap["HttpClient"];
 
                 await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Sending half-an-hour"));
 
@@ -409,20 +393,14 @@ namespace DygBot.Services
                         if (list.Count() == 0)
                             list = reddit.Subreddit(source.SubredditName).Posts.GetNew().Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
                         var post = (LinkPost)list.Random();
-
-                        var path = await DownloadImage(new Uri(post.URL));
-
-                        var pic = await client.GetGuild(guild.Key).GetTextChannel(config.Key).SendFileAsync(path, string.Empty);
-
                         var embed = new EmbedBuilder()
                             .WithTitle(post.Title)
                             .WithUrl($"https://reddit.com{post.Permalink}")
                             .WithColor(RandomColor)
                             .WithFooter($"r/{source.SubredditName}")
-                            .WithImageUrl(pic.Attachments.First().Url)
+                            .WithImageUrl(post.URL)
                             .Build();
                         await client.GetGuild(guild.Key).GetTextChannel(config.Key).SendMessageAsync(embed: embed);
-                        await pic.DeleteAsync();
                     }
                 }
             }

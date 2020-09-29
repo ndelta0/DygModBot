@@ -135,10 +135,10 @@ namespace DygBot.Services
                 .Build();
             ITrigger halfAnHourTrigger = TriggerBuilder.Create()
                 .WithIdentity("halfAnHourTrigger", "discordGroup")
-                .StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
-                .WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                //.WithCronSchedule("0 0/30 * 1/1 * ? *")
-                //.StartNow()
+                //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
+                //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
+                .WithCronSchedule("0 0/30 * 1/1 * ? *")
+                .StartNow()
                 .Build();
 
             // Schedule jobs
@@ -411,7 +411,7 @@ namespace DygBot.Services
                             list = reddit.Subreddit(source.SubredditName).Posts.GetNew().Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
                         var post = (LinkPost)list.Random();
                         var path = await DownloadImage(new Uri(post.URL));
-                        var pic = await client.GetGuild(685477359213608960).GetTextChannel(688410550056648795).SendFileAsync(path, string.Empty);
+                        var pic = await client.GetGuild(685477359213608960).GetTextChannel(760519366692700280).SendFileAsync(path, string.Empty);
                         var picUrl = pic.Attachments.First().Url;
                         var embed = new EmbedBuilder()
                             .WithTitle(post.Title)

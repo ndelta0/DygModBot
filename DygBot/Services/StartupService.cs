@@ -197,7 +197,7 @@ namespace DygBot.Services
 
                 await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Clearing VC chat"));
 
-                var channelIds = new ulong[] { 720790650982891651, 721114067355435058, 721113555813924885, 721113291677499495 };    // Channels to be cleared
+                var channelIds = new ulong[] { 760505659912618015, 763873712050405406, 721113555813924885, 721114067355435058 };    // Channels to be cleared
                 //var channelIds = new ulong[] { 722187075176235061 };
                 var guild = client.Guilds.First(x => x.Id == 683084560451633212);   // Server with those channels
                 //var guild = client.Guilds.First(x => x.Id == 685477359213608960);

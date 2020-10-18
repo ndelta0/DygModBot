@@ -11,6 +11,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using static DygBot.Services.GitHubService;
 using static DygBot.Modules.ModerationModule.ReactionRoleClass;
+using System.Net.Http;
+using System.IO;
 
 namespace DygBot.Services
 {
@@ -22,6 +24,7 @@ namespace DygBot.Services
         private readonly GitHubService _git;
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
+        private readonly HttpClient _httpClient;
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -29,7 +32,8 @@ namespace DygBot.Services
             IServiceProvider provider,
             GitHubService git,
             LoggingService logging,
-            InteractiveService interactiveService)
+            InteractiveService interactiveService,
+            HttpClient httpClient)
         {
             _discord = discord;
             _commands = commands;
@@ -37,6 +41,7 @@ namespace DygBot.Services
             _git = git;
             _logging = logging;
             _interactive = interactiveService;
+            _httpClient = httpClient;
 
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
@@ -320,70 +325,182 @@ namespace DygBot.Services
                 return;     // Ignore self when checking commands
 
             var context = new SocketCommandContext(_discord, msg);     // Create the command context
-            var guildId = context.Guild.Id;
 
-            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))
+            if (s.Channel is SocketDMChannel)
             {
-                if (string.IsNullOrWhiteSpace(context.Message.Content))
-                {
-                    await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
-                    await _interactive.ReplyAndDeleteAsync(context, "Twoja wiadomość nie zawiera podpisu", timeout: TimeSpan.FromSeconds(3));
-                    return;
-                }
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                Task.Run(async () =>
+                 {
+                     if (!context.IsPrivate)
+                         return;
+
+                     if (msg.Content.StartsWith("db!"))
+                     {
+                         if (msg.Content.StartsWith("db!oc"))
+                         {
+                             if (_discord.GetGuild(683084560451633212).GetUser(msg.Author.Id) == null)
+                             {
+                                 await context.Channel.SendMessageAsync("Nie jesteś członkiem Dygawki, musisz dołączyć na serwer [klikając w ten link](https://discord.gg/dygawka)");
+                                 return;
+                             }
+                             var embed = new EmbedBuilder()
+                                 .WithTitle("Wybierz docelowy kanał na swoje zdjęcie")
+                                 .WithDescription("Dostępne opcje:\n• oc-males | 0\n• oc-females | 1\n• oc-others | 2")
+                                 .WithColor(new Color(0xFF277F))
+                                 .WithFooter(footer =>
+                                 {
+                                     footer.WithText("Krok 1/2 (wyślij 'cancel', aby anulować)");
+                                 })
+                                 .Build();
+                             var embedMsg = await context.Channel.SendMessageAsync(embed: embed);
+
+                             var response = await _interactive.NextMessageAsync(context, timeout: TimeSpan.FromMinutes(1));
+                             if (response == null)
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync("Czas minął, spróbuj jeszcze raz");
+                                 return;
+                             }
+                             else if (response.Content == "cancel")
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync("Wysyłanie zdjęcia anulowane");
+                                 return;
+                             }
+                             var channel = response.Content == "oc-males" || response.Content == "0" ? 683718299778940944 : (response.Content == "oc-females" || response.Content == "1" ? 683718257835900964 : (response.Content == "oc-others" || response.Content == "2" ? 734707341282246706 : -1));
+                             if (channel == -1)
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync("Zły kanał");
+                                 return;
+                             }
+
+                             embed = new EmbedBuilder()
+                                 .WithTitle("Wyślij zdjęcie i opcjonalny opis")
+                                 .WithDescription("Wyślij tylko jedno zdjęcie w załączniku. Do zdjęcia możesz dodać wiadomość, która zostanie dołączona do zdjęcia na kanale. Jeśli nie chcesz opisu, nic nie pisz.")
+                                 .WithColor(new Color(0xFF277F))
+                                 .WithFooter(footer =>
+                                 {
+                                     footer.WithText("Krok 2/2 (wyślij 'cancel', aby anulować)");
+                                 })
+                                 .Build();
+                             embedMsg.ModifyAsync((x) =>
+                             {
+                                 x.Embed = embed;
+                             });
+                             response = await _interactive.NextMessageAsync(context, timeout: TimeSpan.FromMinutes(1));
+                             if (response == null)
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync("Czas minął, spróbuj jeszcze raz");
+                                 return;
+                             }
+                             else if (response.Content == "cancel")
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync("Wysyłanie zdjęcia anulowane");
+                                 return;
+                             }
+                             else if (response.Attachments.Count != 1)
+                             {
+                                 await embedMsg.DeleteAsync();
+                                 await context.Channel.SendMessageAsync($"Anulowano. Otrzymano zdjęć: {response.Attachments.Count} - oczekiwano: 1");
+                                 return;
+                             }
+                             var description = response.Content;
+
+                             var extension = response.Attachments.ElementAt(0).Filename.Split('.').Last();
+
+                             var imgStream = await (await _httpClient.GetAsync(response.Attachments.ElementAt(0).Url)).Content.ReadAsStreamAsync();
+
+                             await _discord.GetGuild(683084560451633212).GetTextChannel((ulong)channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description);
+
+                             await embedMsg.DeleteAsync();
+                             await context.Channel.SendMessageAsync("Wysłano zdjęcie");
+
+                             var logEmbed = new EmbedBuilder()
+                                .WithTitle("Anonimowe zdjęcie na OC")
+                                .WithDescription("======================")
+                                .WithColor(new Color(0xFF277F))
+                                .WithThumbnailUrl(msg.Author.GetAvatarUrl())
+                                .WithImageUrl(response.Attachments.ElementAt(0).Url)
+                                .AddField("Użytkownik", $"{msg.Author.Mention} ({msg.Author.Id})")
+                                .AddField("Opis", $"{(string.IsNullOrWhiteSpace(description) ? "(brak)" : description)}")
+                                .AddField("Kanał", $"{_discord.GetGuild(683084560451633212).GetTextChannel((ulong)channel).Mention}")
+                                .Build();
+
+                             await _discord.GetGuild(683084560451633212).GetTextChannel(722415107576954890).SendMessageAsync(embed: logEmbed);
+                         }
+                     }
+                 });
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
-
-            if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))  // Check if channel is set to be auto reacted in
+            else
             {
-                var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id];   // Get strings of emotes
-                List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
+                var guildId = context.Guild.Id;
 
-                // Parse emotes
-                foreach (var text in emotesString)
+                if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))
                 {
-                    IEmote emote;
-                    try
+                    if (string.IsNullOrWhiteSpace(context.Message.Content))
                     {
-                        emote = Emote.Parse(text);
+                        await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
+                        await _interactive.ReplyAndDeleteAsync(context, "Twoja wiadomość nie zawiera podpisu", timeout: TimeSpan.FromSeconds(3));
+                        return;
                     }
-                    catch (Exception)
-                    {
-                        emote = new Emoji(text);
-                    }
-                    emotes.Add(emote);
                 }
-                await msg.AddReactionsAsync(emotes.ToArray());  // React with emotes
-            }
-            string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
 
-            int argPos = 0;     // Check if the message has a valid command prefix
-            if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
-            {
-                bool executeCommand = false;
-                var commandStr = msg.Content.Split(' ')[0].Substring(argPos);
-                var command = _commands.Commands.FirstOrDefault(x => x.Aliases.Contains(commandStr));
-                if (command != null)
+                if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))  // Check if channel is set to be auto reacted in
                 {
-                    commandStr = command.Name;
-                }
-                if (_git.Config.Servers[guildId].CommandLimit.ContainsKey(commandStr))
-                {
-                    if (_git.Config.Servers[guildId].CommandLimit[commandStr].Contains(context.Channel.Id))
+                    var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id];   // Get strings of emotes
+                    List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
+
+                    // Parse emotes
+                    foreach (var text in emotesString)
                     {
-                        executeCommand = true;
+                        IEmote emote;
+                        try
+                        {
+                            emote = Emote.Parse(text);
+                        }
+                        catch (Exception)
+                        {
+                            emote = new Emoji(text);
+                        }
+                        emotes.Add(emote);
+                    }
+                    await msg.AddReactionsAsync(emotes.ToArray());  // React with emotes
+                }
+                string prefix = _git.Config.Servers[guildId]?.Prefix ?? "db!";
+
+                int argPos = 0;     // Check if the message has a valid command prefix
+                if (msg.HasStringPrefix(prefix, ref argPos) || msg.HasMentionPrefix(_discord.CurrentUser, ref argPos))
+                {
+                    bool executeCommand = false;
+                    var commandStr = msg.Content.Split(' ')[0].Substring(argPos);
+                    var command = _commands.Commands.FirstOrDefault(x => x.Aliases.Contains(commandStr));
+                    if (command != null)
+                    {
+                        commandStr = command.Name;
+                    }
+                    if (_git.Config.Servers[guildId].CommandLimit.ContainsKey(commandStr))
+                    {
+                        if (_git.Config.Servers[guildId].CommandLimit[commandStr].Contains(context.Channel.Id))
+                        {
+                            executeCommand = true;
+                        }
+                        else
+                            executeCommand = false;
                     }
                     else
-                        executeCommand = false;
-                }
-                else
-                    executeCommand = true;
+                        executeCommand = true;
 
 
-                if (executeCommand)
-                {
-                    var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
-
-                    if (!result.IsSuccess)
+                    if (executeCommand)
                     {
+                        var result = await _commands.ExecuteAsync(context, argPos, _provider);     // Execute the command
+
+                        if (!result.IsSuccess)
+                        {
                             switch (result.Error)
                             {
                                 case CommandError.BadArgCount:
@@ -401,6 +518,7 @@ namespace DygBot.Services
                                     await context.Channel.SendMessageAsync("Miałem problem z tym poleceniem");
                                     break;
                             }
+                        }
                     }
                 }
             }

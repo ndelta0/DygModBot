@@ -119,7 +119,7 @@ namespace DygBot.Services
                 public Dictionary<string, HashSet<ulong>> AllowedReactions { get; set; } = new Dictionary<string, HashSet<ulong>>();
                 public Dictionary<ulong, Gender> HalfAnHourConfig { get; set; } = new Dictionary<ulong, Gender>();
                 public Dictionary<Gender, ulong> OcChannels { get; set; } = new Dictionary<Gender, ulong>();
-                public Color ServerColor { get; set; } = RandomColor();
+                public uint ServerColor { get; set; } = RandomColor().RawValue;
                 public Dictionary<string, string> AdditionalConfig { get; set; } = new Dictionary<string, string>();
 
             }

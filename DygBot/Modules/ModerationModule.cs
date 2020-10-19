@@ -235,7 +235,7 @@ namespace DygBot.Modules
 
             [Command("set")]
             [Summary("Sets roles to react with and channel to react on")]
-            public async Task SetAutoreact([Summary("Channel")] ITextChannel channel, [Summary("Space separated Emotes/Emojis")] params string[] emotes)
+            public async Task SetAutoreact([Summary("Channel")] ITextChannel channel, [Summary("Czy opis jest wymagany")] bool contentRequired, [Summary("Space separated Emotes/Emojis")] params string[] emotes)
             {
                 using (Context.Channel.EnterTypingState())
                 {
@@ -251,7 +251,11 @@ namespace DygBot.Modules
                         if (emote != null)
                             emotesList.Add(emote);
                     }
-                    _git.Config.Servers[guildId].AutoReact[channel.Id] = emotesList.Select(x => x.ToString()).ToList();
+                    _git.Config.Servers[guildId].AutoReact[channel.Id] = new AutoReactClass
+                    {
+                        Emotes = emotesList.Select(x => x.ToString()).ToList(),
+                        RequireContent = contentRequired
+                    };
                     await _git.UploadConfig();
                     await ReplyAsync($"AutoReply on channel **{channel}** set up successfully");
                 }

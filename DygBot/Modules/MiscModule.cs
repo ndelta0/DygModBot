@@ -100,6 +100,7 @@ namespace DygBot.Modules
             }
             else if (response.Content == "cancel")
             {
+                await response.DeleteAsync();
                 await embedMsg.DeleteAsync();
                 await ReplyAndDeleteAsync("Wysyłanie zdjęcia anulowane", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
@@ -142,6 +143,7 @@ namespace DygBot.Modules
             }
             else if (response.Content == "cancel")
             {
+                await response.DeleteAsync();
                 await embedMsg.DeleteAsync();
                 await ReplyAndDeleteAsync("Wysyłanie zdjęcia anulowane", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);

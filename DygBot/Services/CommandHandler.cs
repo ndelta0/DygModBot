@@ -362,7 +362,7 @@ namespace DygBot.Services
 
                 if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))
                 {
-                    if (string.IsNullOrWhiteSpace(context.Message.Content))
+                    if (string.IsNullOrWhiteSpace(context.Message.Content) && _git.Config.Servers[guildId].AutoReact[context.Channel.Id].RequireContent)
                     {
                         await context.Message.DeleteAsync(new RequestOptions { AuditLogReason = "Wiadomość bez podpisu" });
                         await _interactive.ReplyAndDeleteAsync(context, "Twoja wiadomość nie zawiera podpisu", timeout: TimeSpan.FromSeconds(3));
@@ -372,7 +372,7 @@ namespace DygBot.Services
 
                 if (_git.Config.Servers[guildId].AutoReact.ContainsKey(context.Channel.Id))  // Check if channel is set to be auto reacted in
                 {
-                    var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id];   // Get strings of emotes
+                    var emotesString = _git.Config.Servers[guildId].AutoReact[context.Channel.Id].Emotes;   // Get strings of emotes
                     List<IEmote> emotes = new List<IEmote>(emotesString.Count); // Create a list of emotes
 
                     // Parse emotes

@@ -107,9 +107,14 @@ namespace DygBot.Services
                     public ReactionAction Action { get; set; }
                     public Dictionary<string, ulong> Roles { get; set; } = new Dictionary<string, ulong>();
                 }
+                public class AutoReactClass
+                {
+                    public List<string> Emotes { get; set; } = new List<string>();
+                    public bool RequireContent { get; set; } = false;
+                }
                 public string Prefix { get; set; } = "db!";
                 public List<ulong> ManagementRoles { get; set; } = new List<ulong>();
-                public Dictionary<ulong, List<string>> AutoReact { get; set; } = new Dictionary<ulong, List<string>>();
+                public Dictionary<ulong, AutoReactClass> AutoReact { get; set; } = new Dictionary<ulong, AutoReactClass>();
                 public Dictionary<ulong, CountChannelClass> CountChannels { get; set; } = new Dictionary<ulong, CountChannelClass>();
                 public Dictionary<ulong, ulong> VcTextRole { get; set; } = new Dictionary<ulong, ulong>();
                 public Dictionary<string, List<ulong>> CommandLimit { get; set; } = new Dictionary<string, List<ulong>>();

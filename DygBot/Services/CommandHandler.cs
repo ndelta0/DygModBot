@@ -24,7 +24,6 @@ namespace DygBot.Services
         private readonly GitHubService _git;
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
-        private readonly HttpClient _httpClient;
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -32,8 +31,7 @@ namespace DygBot.Services
             IServiceProvider provider,
             GitHubService git,
             LoggingService logging,
-            InteractiveService interactiveService,
-            HttpClient httpClient)
+            InteractiveService interactiveService)
         {
             _discord = discord;
             _commands = commands;
@@ -41,7 +39,6 @@ namespace DygBot.Services
             _git = git;
             _logging = logging;
             _interactive = interactiveService;
-            _httpClient = httpClient;
 
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
@@ -80,12 +77,12 @@ namespace DygBot.Services
                 await dmChannel.SendMessageAsync(embed: new EmbedBuilder()
                     .WithTitle("**Szanowny użytkowniku!**")
                     .WithDescription($"Dygawka jest serwerem z zawartością nieodpowiednią dla nieletnich. Deklarując się jako osoba poniżej 18ego roku życia, Twoje konto zostało usunięte z listy dygaczy. Nie martw się, __nie zostało zbanowane__. Jeśli wybór roli *Underage* był efektem pomyłki, możesz nadal dołączyć do grona naszych użytkowników potwierdzając swoją pełnoletniość na mocy punktu nr 15 w naszym regulaminie. Jeśli zaś jesteś osobą nieletnią, zapraszamy na nasz serwer w przyszłości!\n\nMożesz dołączyć na serwer ponownie **[klikając w ten link]({inviteLink.Url})**")
-                    .WithColor(new Color(0xFF277F))
+                    .WithColor(_git.Config.Servers[guild.Id].ServerColor)
                     .Build());
                 await guild.GetTextChannel(708805642349051984).SendMessageAsync(embed: new EmbedBuilder()
                     .WithTitle("Osoba niepełnoletnia")
                     .WithDescription($"**{user.Username}#{user.Discriminator}** ({user.Id}) wybrał rolę *Underage*")
-                    .WithColor(new Color(0xFF277F))
+                    .WithColor(_git.Config.Servers[guild.Id].ServerColor)
                     .Build());
                 await message.RemoveReactionAsync(sockReaction.Emote, user);
                 await (user as SocketGuildUser).KickAsync();
@@ -328,112 +325,33 @@ namespace DygBot.Services
 
             if (s.Channel is SocketDMChannel)
             {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                Task.Run(async () =>
-                 {
-                     if (!context.IsPrivate)
-                         return;
+                if (!context.IsPrivate)
+                    return;
 
-                     if (msg.Content.StartsWith("db!"))
-                     {
-                         if (msg.Content.StartsWith("db!oc"))
-                         {
-                             if (_discord.GetGuild(683084560451633212).GetUser(msg.Author.Id) == null)
-                             {
-                                 await context.Channel.SendMessageAsync("Nie jesteś członkiem Dygawki, musisz dołączyć na serwer [klikając w ten link](https://discord.gg/dygawka)");
-                                 return;
-                             }
-                             var embed = new EmbedBuilder()
-                                 .WithTitle("Wybierz docelowy kanał na swoje zdjęcie")
-                                 .WithDescription("Dostępne opcje:\n• oc-males | 0\n• oc-females | 1\n• oc-others | 2")
-                                 .WithColor(new Color(0xFF277F))
-                                 .WithFooter(footer =>
-                                 {
-                                     footer.WithText("Krok 1/2 (wyślij 'cancel', aby anulować)");
-                                 })
-                                 .Build();
-                             var embedMsg = await context.Channel.SendMessageAsync(embed: embed);
-
-                             var response = await _interactive.NextMessageAsync(context, timeout: TimeSpan.FromMinutes(1));
-                             if (response == null)
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync("Czas minął, spróbuj jeszcze raz");
-                                 return;
-                             }
-                             else if (response.Content == "cancel")
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync("Wysyłanie zdjęcia anulowane");
-                                 return;
-                             }
-                             var channel = response.Content == "oc-males" || response.Content == "0" ? 683718299778940944 : (response.Content == "oc-females" || response.Content == "1" ? 683718257835900964 : (response.Content == "oc-others" || response.Content == "2" ? 734707341282246706 : -1));
-                             if (channel == -1)
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync("Zły kanał");
-                                 return;
-                             }
-
-                             embed = new EmbedBuilder()
-                                 .WithTitle("Wyślij zdjęcie i opcjonalny opis")
-                                 .WithDescription("Wyślij tylko jedno zdjęcie w załączniku. Do zdjęcia możesz dodać wiadomość, która zostanie dołączona do zdjęcia na kanale. Jeśli nie chcesz opisu, nic nie pisz.")
-                                 .WithColor(new Color(0xFF277F))
-                                 .WithFooter(footer =>
-                                 {
-                                     footer.WithText("Krok 2/2 (wyślij 'cancel', aby anulować)");
-                                 })
-                                 .Build();
-                             embedMsg.ModifyAsync((x) =>
-                             {
-                                 x.Embed = embed;
-                             });
-                             response = await _interactive.NextMessageAsync(context, timeout: TimeSpan.FromMinutes(1));
-                             if (response == null)
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync("Czas minął, spróbuj jeszcze raz");
-                                 return;
-                             }
-                             else if (response.Content == "cancel")
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync("Wysyłanie zdjęcia anulowane");
-                                 return;
-                             }
-                             else if (response.Attachments.Count != 1)
-                             {
-                                 await embedMsg.DeleteAsync();
-                                 await context.Channel.SendMessageAsync($"Anulowano. Otrzymano zdjęć: {response.Attachments.Count} - oczekiwano: 1");
-                                 return;
-                             }
-                             var description = response.Content;
-
-                             var extension = response.Attachments.ElementAt(0).Filename.Split('.').Last();
-
-                             var imgStream = await (await _httpClient.GetAsync(response.Attachments.ElementAt(0).Url)).Content.ReadAsStreamAsync();
-
-                             await _discord.GetGuild(683084560451633212).GetTextChannel((ulong)channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description);
-
-                             await embedMsg.DeleteAsync();
-                             await context.Channel.SendMessageAsync("Wysłano zdjęcie");
-
-                             var logEmbed = new EmbedBuilder()
-                                .WithTitle("Anonimowe zdjęcie na OC")
-                                .WithDescription("======================")
-                                .WithColor(new Color(0xFF277F))
-                                .WithThumbnailUrl(msg.Author.GetAvatarUrl())
-                                .WithImageUrl(response.Attachments.ElementAt(0).Url)
-                                .AddField("Użytkownik", $"{msg.Author.Mention} ({msg.Author.Id})")
-                                .AddField("Opis", $"{(string.IsNullOrWhiteSpace(description) ? "(brak)" : description)}")
-                                .AddField("Kanał", $"{_discord.GetGuild(683084560451633212).GetTextChannel((ulong)channel).Mention}")
-                                .Build();
-
-                             await _discord.GetGuild(683084560451633212).GetTextChannel(722415107576954890).SendMessageAsync(embed: logEmbed);
-                         }
-                     }
-                 });
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                if (msg.Content.StartsWith("db!oc"))
+                {
+                    if (_discord.GetGuild(683084560451633212).GetUser(msg.Author.Id) == null)
+                    {
+                        await context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
+                        return;
+                    }
+                    else
+                    {
+                        var role = _discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"]));
+                        var member = _discord.GetGuild(683084560451633212).GetUser(msg.Author.Id);
+                        await member.AddRoleAsync(role);
+                        var channel = _discord.GetGuild(683084560451633212).GetTextChannel(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postChannel"]));
+                        var mentionMsg = await channel.SendMessageAsync(msg.Author.Mention);
+                        await channel.SendMessageAsync("Powtórz komendę tutaj");
+                        await Task.Run(async () =>
+                        {
+                            await Task.Delay(1000);
+                            await mentionMsg.DeleteAsync();
+                            await Task.Delay(TimeSpan.FromMinutes(5));
+                            await member.RemoveRoleAsync(role);
+                        }).ConfigureAwait(false);
+                    }
+                }
             }
             else
             {

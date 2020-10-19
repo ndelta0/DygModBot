@@ -114,9 +114,13 @@ namespace DygBot.Services
                 public Dictionary<ulong, ulong> VcTextRole { get; set; } = new Dictionary<ulong, ulong>();
                 public Dictionary<string, List<ulong>> CommandLimit { get; set; } = new Dictionary<string, List<ulong>>();
                 public ulong NotificationChannelId { get; set; } = default;
+                public ulong LogChannel { get; set; } = default;
                 public Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>> ReactionRoles { get; set; } = new Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>>();
                 public Dictionary<string, HashSet<ulong>> AllowedReactions { get; set; } = new Dictionary<string, HashSet<ulong>>();
                 public Dictionary<ulong, Gender> HalfAnHourConfig { get; set; } = new Dictionary<ulong, Gender>();
+                public Dictionary<Gender, ulong> OcChannels { get; set; } = new Dictionary<Gender, ulong>();
+                public Color ServerColor { get; set; } = RandomColor();
+                public Dictionary<string, string> AdditionalConfig { get; set; } = new Dictionary<string, string>();
 
             }
             public string DiscordToken { get; set; }
@@ -137,6 +141,12 @@ namespace DygBot.Services
             public string Message { get; set; } = "Config Update (Bot)";
             public string Content { get; set; }
             public string Sha { get; set; }
+        }
+
+        private static Color RandomColor()
+        {
+            var rand = new Random();
+            return new Color((uint)rand.Next(0xFFFFFF + 1));
         }
     }
 }

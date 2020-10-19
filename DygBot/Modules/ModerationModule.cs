@@ -65,12 +65,23 @@ namespace DygBot.Modules
             await ReplyAndDeleteAsync("Konfiguracja przeładowana", timeout: TimeSpan.FromSeconds(5));
         }
 
-        //[Command("test")]
-        //[Summary("test")]
-        //[RequireUser(312223735505747968)]
-        //public async Task TestAsync()
-        //{
-        //}
+        [Command("test")]
+        [Summary("test")]
+        [RequireUser(312223735505747968)]
+        public async Task TestAsync()
+        {
+            await Task.Delay(0);
+            var config = _git.Config.Servers[Context.Guild.Id];
+            Console.WriteLine(config.LogChannel);
+            foreach (var kvp in config.OcChannels)
+            {
+                Console.WriteLine($"{kvp.Key} - {kvp.Value}");
+            }
+            foreach (var kvp in config.AdditionalConfig)
+            {
+                Console.WriteLine($"{kvp.Key} - {kvp.Value}");
+            }
+        }
 
         [Group("managementRole")]
         public class ManagementRoleModule : InteractiveBase<SocketCommandContext>

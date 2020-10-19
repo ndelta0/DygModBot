@@ -158,11 +158,13 @@ namespace DygBot.Modules
             }
             var description = response.Content;
 
+            var url = response.Attachments.ElementAt(0).Url;
+
             var extension = response.Attachments.ElementAt(0).Filename.Split('.').Last();
 
-            var imgStream = await (await _http.GetAsync(response.Attachments.ElementAt(0).Url)).Content.ReadAsStreamAsync();
+            var imgStream = await (await _http.GetAsync(url)).Content.ReadAsStreamAsync();
 
-            await Context.Guild.GetTextChannel(channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description);
+            var discordUrl = (await Context.Guild.GetTextChannel(channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description)).Attachments.ElementAt(0).Url;
 
             await embedMsg.ModifyAsync(x =>
             {
@@ -175,7 +177,7 @@ namespace DygBot.Modules
                .WithDescription("======================")
                .WithColor(_git.Config.Servers[Context.Guild.Id].ServerColor)
                .WithThumbnailUrl(Context.Message.Author.GetAvatarUrl())
-               .WithImageUrl(response.Attachments.ElementAt(0).Url)
+               .WithImageUrl(discordUrl)
                .AddField("Użytkownik", $"{Context.Message.Author.Mention} ({Context.Message.Author.Id})")
                .AddField("Opis", $"{(string.IsNullOrWhiteSpace(description) ? "(brak)" : description)}")
                .AddField("Kanał", $"{Context.Guild.GetTextChannel(channel).Mention}")

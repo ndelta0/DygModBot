@@ -341,15 +341,13 @@ namespace DygBot.Services
                         var member = _discord.GetGuild(683084560451633212).GetUser(msg.Author.Id);
                         await member.AddRoleAsync(role);
                         var channel = _discord.GetGuild(683084560451633212).GetTextChannel(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postChannel"]));
-                        var mentionMsg = await channel.SendMessageAsync(msg.Author.Mention);
+                        await context.Channel.SendMessageAsync($"Powtórz komendę na kanale {channel.Mention}");
                         await channel.SendMessageAsync("Powtórz komendę tutaj");
-                        await Task.Run(async () =>
-                        {
-                            await Task.Delay(1000);
-                            await mentionMsg.DeleteAsync();
-                            await Task.Delay(TimeSpan.FromMinutes(5));
-                            await member.RemoveRoleAsync(role);
-                        }).ConfigureAwait(false);
+                        _ = Task.Run(async () =>
+                          {
+                              await Task.Delay(TimeSpan.FromMinutes(5));
+                              await member.RemoveRoleAsync(role);
+                          });
                     }
                 }
             }

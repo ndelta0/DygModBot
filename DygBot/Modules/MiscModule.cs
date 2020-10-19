@@ -166,7 +166,11 @@ namespace DygBot.Modules
 
             var imgStream = await (await _http.GetAsync(url)).Content.ReadAsStreamAsync();
 
-            var discordUrl = (await Context.Guild.GetTextChannel(channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description)).Attachments.ElementAt(0).Url;
+            var fileMsg = await Context.Guild.GetTextChannel(channel).SendFileAsync(imgStream, $"anonymous-oc.{extension}", description);
+
+            await fileMsg.AddReactionAsync(Emote.Parse("<:1dyg:708782038521741352>"));
+
+            var discordUrl = fileMsg.Attachments.ElementAt(0).Url;
 
             await embedMsg.ModifyAsync(x =>
             {

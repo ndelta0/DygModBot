@@ -71,6 +71,7 @@ namespace DygBot.Modules
                 await ReplyAndDeleteAsync("Anonimowe wysyłanie wiadomości nie jest włączone na tym serwerze", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
             var strList = new List<string>();
@@ -96,15 +97,17 @@ namespace DygBot.Modules
                 await ReplyAndDeleteAsync("Czas minął, spróbuj jeszcze raz", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
-            else if (response.Content == "cancel")
+            else if (response.Content.ToLower() == "cancel")
             {
                 await response.DeleteAsync();
                 await embedMsg.DeleteAsync();
                 await ReplyAndDeleteAsync("Wysyłanie zdjęcia anulowane", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
 
@@ -115,6 +118,7 @@ namespace DygBot.Modules
                 await ReplyAndDeleteAsync("Zły kanał", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
 
@@ -139,15 +143,17 @@ namespace DygBot.Modules
                 await ReplyAndDeleteAsync("Czas minął, spróbuj jeszcze raz", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
-            else if (response.Content == "cancel")
+            else if (response.Content.ToLower() == "cancel")
             {
                 await response.DeleteAsync();
                 await embedMsg.DeleteAsync();
                 await ReplyAndDeleteAsync("Wysyłanie zdjęcia anulowane", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
             else if (response.Attachments.Count != 1)
@@ -156,6 +162,7 @@ namespace DygBot.Modules
                 await ReplyAndDeleteAsync($"Anulowano. Otrzymano zdjęć: {response.Attachments.Count} - oczekiwano: 1", timeout: TimeSpan.FromSeconds(5));
                 await Task.Delay(5000);
                 await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+                var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
                 return;
             }
             var description = response.Content;
@@ -197,6 +204,7 @@ namespace DygBot.Modules
             await Task.Delay(5000);
             await embedMsg.DeleteAsync();
             await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
+            var msgs = Context.Channel.GetMessagesAsync().ForEachAsync(x => x.ToList().ForEach(async y => await y.DeleteAsync()));
         }
     }
 }

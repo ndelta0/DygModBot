@@ -335,6 +335,11 @@ namespace DygBot.Services
                         await context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
                         return;
                     }
+                    else if (_discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"])).Members.Count() > 0)
+                    {
+                        await context.Channel.SendMessageAsync("Aktualnie kanał oc-anonymous jest zajęty przez innego użytkownika. Spróbuj ponownie za chwilę.");
+                        return;
+                    }
                     else
                     {
                         var role = _discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"]));

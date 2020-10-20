@@ -13,6 +13,7 @@ using static DygBot.Services.GitHubService;
 using static DygBot.Modules.ModerationModule.ReactionRoleClass;
 using System.Net.Http;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace DygBot.Services
 {
@@ -24,6 +25,7 @@ namespace DygBot.Services
         private readonly GitHubService _git;
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
+        private readonly HttpClient _client;
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -31,7 +33,8 @@ namespace DygBot.Services
             IServiceProvider provider,
             GitHubService git,
             LoggingService logging,
-            InteractiveService interactiveService)
+            InteractiveService interactiveService,
+            HttpClient client)
         {
             _discord = discord;
             _commands = commands;
@@ -39,13 +42,33 @@ namespace DygBot.Services
             _git = git;
             _logging = logging;
             _interactive = interactiveService;
+            _client = client;
 
             _discord.MessageReceived += Discord_MessageReceived;   // Bind MessageReceived event
             _discord.JoinedGuild += Discord_JoinedGuild;   // Bind JoinedGuild event
             _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
             _discord.ReactionAdded += Discord_ReactionAdded;
             _discord.ReactionRemoved += Discord_ReactionRemoved;
-            _discord.Ready += async () => await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
+            _discord.Ready += async () =>
+            {
+                await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
+
+                _ = Task.Run(async () =>
+                {
+                    var msg = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/D3LT4PL/DygModBot/commits?per_page=1");
+                    msg.Headers.UserAgent.ParseAdd("DygModBot by D3LT4PL/1.0");
+                    var resp = await _client.SendAsync(msg);
+                    var header = resp.Headers.GetValues("link").First();
+                    var amount = int.Parse(new Regex("&page=([0-9]*)>; rel=\"last\"").Match(header).Groups[1].Value);
+
+                    IActivity activity = new Game($"Update nr {amount}!", ActivityType.Watching, ActivityProperties.None, "Wow, kot by pomyślał");
+                    await _discord.SetActivityAsync(activity);
+                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    await _discord.SetActivityAsync(null);
+                });
+
+
+            };
 
             _commands.AddTypeReader<object>(new ObjectTypeReader());
             _commands.AddTypeReader<Uri>(new UriTypeReader());

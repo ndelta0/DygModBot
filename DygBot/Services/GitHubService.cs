@@ -123,7 +123,7 @@ namespace DygBot.Services
                 public Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>> ReactionRoles { get; set; } = new Dictionary<ulong, Dictionary<ulong, List<ReactionRole>>>();
                 public Dictionary<string, HashSet<ulong>> AllowedReactions { get; set; } = new Dictionary<string, HashSet<ulong>>();
                 public Dictionary<ulong, Gender> HalfAnHourConfig { get; set; } = new Dictionary<ulong, Gender>();
-                public Dictionary<Gender, ulong> OcChannels { get; set; } = new Dictionary<Gender, ulong>();
+                public Dictionary<ulong, ulong> OcChannels { get; set; } = new Dictionary<ulong, ulong>();
                 public uint ServerColor { get; set; } = RandomColor().RawValue;
                 public Dictionary<string, string> AdditionalConfig { get; set; } = new Dictionary<string, string>();
 

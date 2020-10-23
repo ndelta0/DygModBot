@@ -62,7 +62,7 @@ namespace DygBot.Modules
             await _git.DownloadConfig();
             await _git.UploadConfig();
             await _git.DownloadConfig();
-            await ReplyAndDeleteAsync("Konfiguracja przeładowana", timeout: TimeSpan.FromSeconds(5));
+            await ReplyAsync("Konfiguracja przeładowana");
         }
 
         [Command("test")]
@@ -83,7 +83,7 @@ namespace DygBot.Modules
             }
         }
 
-        [Group("managementRole")]
+        [Group("mr")]
         public class ManagementRoleModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -98,19 +98,16 @@ namespace DygBot.Modules
             [Summary("Adds role to list of roles that can use this bot")]
             public async Task AddManagementRoleAsync([Summary("Role")] IRole role)
             {
-                using (Context.Channel.EnterTypingState())  // Show the "typing" notification
+                var roleId = role.Id;  // Get role ID
+                if (_git.Config.Servers[Context.Guild.Id].ManagementRoles.Contains(roleId))    // Check for information about role in config
                 {
-                    var roleId = role.Id;  // Get role ID
-                    if (_git.Config.Servers[Context.Guild.Id].ManagementRoles.Contains(roleId))    // Check for information about role in config
-                    {
-                        await ReplyAsync("This role is already in the list");
-                    }
-                    else
-                    {
-                        _git.Config.Servers[Context.Guild.Id].ManagementRoles.Add(roleId); // Add role to config
-                        await _git.UploadConfig();
-                        await ReplyAsync("Role added to list");
-                    }
+                    await ReplyAsync("This role is already in the list");
+                }
+                else
+                {
+                    _git.Config.Servers[Context.Guild.Id].ManagementRoles.Add(roleId); // Add role to config
+                    await _git.UploadConfig();
+                    await ReplyAsync("Role added to list");
                 }
             }
 
@@ -136,7 +133,7 @@ namespace DygBot.Modules
 
         }
 
-        [Group("countChannel")]
+        [Group("cc")]
         public class CountChannelModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -186,7 +183,7 @@ namespace DygBot.Modules
             }
         }
 
-        [Group("vcTextRole")]
+        [Group("vtr")]
         public class VcTextRoleModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -200,30 +197,24 @@ namespace DygBot.Modules
             [Summary("Sets a role to give on entering a VC")]
             public async Task SetVcTextRole([Summary("Channel")] IVoiceChannel channel, [Summary("Role")] IRole role)
             {
-                using (Context.Channel.EnterTypingState())
-                {
-                    var guildId = Context.Guild.Id;
-                    _git.Config.Servers[guildId].VcTextRole[channel.Id] = role.Id;    // Set role ID for channel
-                    await _git.UploadConfig();
-                    await ReplyAsync("Role successfully bound to voice chat");
-                }
+                var guildId = Context.Guild.Id;
+                _git.Config.Servers[guildId].VcTextRole[channel.Id] = role.Id;    // Set role ID for channel
+                await _git.UploadConfig();
+                await ReplyAsync("Role successfully bound to voice chat");
             }
 
             [Command("clear")]
             [Summary("Clears a role given on entering a VC")]
             public async Task ClearVcTextRole([Summary("Channel")] IVoiceChannel channel)
             {
-                using (Context.Channel.EnterTypingState())
-                {
-                    var guildId = Context.Guild.Id;
-                    _git.Config.Servers[guildId].VcTextRole.Remove(channel.Id);  // Clear channel
-                    await _git.UploadConfig();
-                    await ReplyAsync("Role successfully unbound from voice chat");
-                }
+                var guildId = Context.Guild.Id;
+                _git.Config.Servers[guildId].VcTextRole.Remove(channel.Id);  // Clear channel
+                await _git.UploadConfig();
+                await ReplyAsync("Role successfully unbound from voice chat");
             }
         }
 
-        [Group("autoreact")]
+        [Group("ar")]
         public class AutoreactModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -237,45 +228,39 @@ namespace DygBot.Modules
             [Summary("Sets roles to react with and channel to react on")]
             public async Task SetAutoreact([Summary("Channel")] ITextChannel channel, [Summary("Czy opis jest wymagany")] bool contentRequired, [Summary("Space separated Emotes/Emojis")] params string[] emotes)
             {
-                using (Context.Channel.EnterTypingState())
+                var guildId = Context.Guild.Id;
+                var emotesList = new List<IEmote>(emotes.Length);
+                foreach (var text in emotes)
                 {
-                    var guildId = Context.Guild.Id;
-                    var emotesList = new List<IEmote>(emotes.Length);
-                    foreach (var text in emotes)
-                    {
-                        IEmote emote;
-                        if (Emote.TryParse(text, out Emote emoteTmp))
-                            emote = emoteTmp;
-                        else
-                            emote = new Emoji(text);
-                        if (emote != null)
-                            emotesList.Add(emote);
-                    }
-                    _git.Config.Servers[guildId].AutoReact[channel.Id] = new AutoReactClass
-                    {
-                        Emotes = emotesList.Select(x => x.ToString()).ToList(),
-                        RequireContent = contentRequired
-                    };
-                    await _git.UploadConfig();
-                    await ReplyAsync($"AutoReply on channel **{channel}** set up successfully");
+                    IEmote emote;
+                    if (Emote.TryParse(text, out Emote emoteTmp))
+                        emote = emoteTmp;
+                    else
+                        emote = new Emoji(text);
+                    if (emote != null)
+                        emotesList.Add(emote);
                 }
+                _git.Config.Servers[guildId].AutoReact[channel.Id] = new AutoReactClass
+                {
+                    Emotes = emotesList.Select(x => x.ToString()).ToList(),
+                    RequireContent = contentRequired
+                };
+                await _git.UploadConfig();
+                await ReplyAsync($"AutoReply on channel **{channel}** set up successfully");
             }
 
             [Command("clear")]
             [Summary("Clears autoreact from channel")]
             public async Task ClearAutoreact([Summary("Channel")] ITextChannel channel)
             {
-                using (Context.Channel.EnterTypingState())
-                {
-                    var guildId = Context.Guild.Id;
-                    _git.Config.Servers[guildId].AutoReact.Remove(channel.Id);   // Clear emotes
-                    await _git.UploadConfig();
-                    await ReplyAsync($"AutoReply on channel **{channel}** cleared successfully");
-                }
+                var guildId = Context.Guild.Id;
+                _git.Config.Servers[guildId].AutoReact.Remove(channel.Id);   // Clear emotes
+                await _git.UploadConfig();
+                await ReplyAsync($"AutoReply on channel **{channel}** cleared successfully");
             }
         }
 
-        [Group("commandLimit")]
+        [Group("cl")]
         public class CommandLimitModule : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -291,34 +276,31 @@ namespace DygBot.Modules
             [Summary("Adds a channel where a command can be used in")]
             public async Task AddCommandLimitAsync([Summary("Channel")] ITextChannel channel, [Summary("Command")][Remainder] string command)
             {
-                using (Context.Channel.EnterTypingState())
+                if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
                 {
-                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    await ReplyAsync($"No command has alias of {command}");
+                }
+                else
+                {
+                    command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
+                    if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
                     {
-                        await ReplyAsync($"No command has alias of {command}");
-                    }
-                    else
-                    {
-                        command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
-                        if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
+                        if (_git.Config.Servers[Context.Guild.Id].CommandLimit[command].Contains(channel.Id))
                         {
-                            if (_git.Config.Servers[Context.Guild.Id].CommandLimit[command].Contains(channel.Id))
-                            {
-                                await ReplyAsync("Command already limited to that channel");
-                            }
-                            else
-                            {
-                                _git.Config.Servers[Context.Guild.Id].CommandLimit[command].Add(channel.Id);
-                                await _git.UploadConfig();
-                                await ReplyAsync($"Command **{command}** limited to channel {channel.Mention}");
-                            }
+                            await ReplyAsync("Command already limited to that channel");
                         }
                         else
                         {
-                            _git.Config.Servers[Context.Guild.Id].CommandLimit[command] = new List<ulong> { channel.Id };
+                            _git.Config.Servers[Context.Guild.Id].CommandLimit[command].Add(channel.Id);
                             await _git.UploadConfig();
                             await ReplyAsync($"Command **{command}** limited to channel {channel.Mention}");
                         }
+                    }
+                    else
+                    {
+                        _git.Config.Servers[Context.Guild.Id].CommandLimit[command] = new List<ulong> { channel.Id };
+                        await _git.UploadConfig();
+                        await ReplyAsync($"Command **{command}** limited to channel {channel.Mention}");
                     }
                 }
             }
@@ -327,25 +309,22 @@ namespace DygBot.Modules
             [Summary("Removes a channel where a command can be used in")]
             public async Task RemoveCommandLimitAsync([Summary("Channel")] ITextChannel channel, [Summary("Command")][Remainder] string command)
             {
-                using (Context.Channel.EnterTypingState())
+                if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
                 {
-                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    await ReplyAsync($"No command has alias of {command}");
+                }
+                else
+                {
+                    command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
+                    if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
                     {
-                        await ReplyAsync($"No command has alias of {command}");
+                        _git.Config.Servers[Context.Guild.Id].CommandLimit.Remove(command);
+                        await _git.UploadConfig();
+                        await ReplyAsync($"Command **{command}** removed from channel {channel.Mention}");
                     }
                     else
                     {
-                        command = _service.Commands.First(x => x.Aliases.Contains(command)).Name;
-                        if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
-                        {
-                            _git.Config.Servers[Context.Guild.Id].CommandLimit.Remove(command);
-                            await _git.UploadConfig();
-                            await ReplyAsync($"Command **{command}** removed from channel {channel.Mention}");
-                        }
-                        else
-                        {
-                            await ReplyAsync("Command was not limited to that channel");
-                        }
+                        await ReplyAsync("Command was not limited to that channel");
                     }
                 }
             }
@@ -354,34 +333,30 @@ namespace DygBot.Modules
             [Summary("Shows what channels command can be used in")]
             public async Task ShowCommandLimitAsync([Summary("Command")][Remainder] string command)
             {
-                using (Context.Channel.EnterTypingState())
+                if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
                 {
-                    if (!_service.Commands.Any(x => x.Aliases.Contains(command)))
+                    await ReplyAsync($"No command has alias of {command}");
+                }
+                else
+                {
+                    string message = "Channels where command can be used:\n";
+                    if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
                     {
-                        await ReplyAsync($"No command has alias of {command}");
+                        foreach (var channelId in _git.Config.Servers[Context.Guild.Id].CommandLimit[command])
+                        {
+                            message += $"<#{channelId}>\n";
+                        }
                     }
                     else
                     {
-                        string message = "Channels where command can be used:\n";
-                        if (_git.Config.Servers[Context.Guild.Id].CommandLimit.ContainsKey(command))
-                        {
-                            foreach (var channelId in _git.Config.Servers[Context.Guild.Id].CommandLimit[command])
-                            {
-                                message += $"<#{channelId}>\n";
-                            }
-                        }
-                        else
-                        {
-                            message += "All channels (no limits)";
-                        }
-                        await ReplyAsync(message);
+                        message += "All channels (no limits)";
                     }
+                    await ReplyAsync(message);
                 }
             }
         }
 
-        [Group("reactionrole")]
-        [Alias("rr")]
+        [Group("rr")]
         public class ReactionRoleClass : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;
@@ -425,7 +400,7 @@ namespace DygBot.Modules
                     await ReplyAsync("Czas minął, spróbuj jeszcze raz");
                     return;
                 }
-                else if (response.Content == "cancel")
+                else if (response.Content.ToLower() == "cancel")
                 {
                     await msg.DeleteAsync();
                     await ReplyAsync("Tworzenie roli anulowane");
@@ -434,11 +409,12 @@ namespace DygBot.Modules
 
                 var messageUrl = response.Content;
                 var messageSplit = messageUrl.Split('/');
-                try
+
+                if (ulong.TryParse(messageSplit[4], out ulong guildId)
+                    && ulong.TryParse(messageSplit[5], out ulong channelId)
+                    && ulong.TryParse(messageSplit[6], out ulong messageId))
+
                 {
-                    ulong guildId = ulong.Parse(messageSplit[4]);
-                    ulong channelId = ulong.Parse(messageSplit[5]);
-                    ulong messageId = ulong.Parse(messageSplit[6]);
                     if (guildId != Context.Guild.Id)
                     {
                         await ReplyAsync("Wiadomość nie jest z tego serwera");
@@ -480,280 +456,261 @@ namespace DygBot.Modules
                         await ReplyAsync("Czas minął, spróbuj jeszcze raz");
                         return;
                     }
-                    else if (response.Content == "cancel")
+                    else if (response.Content.ToLower() == "cancel")
                     {
                         await msg.DeleteAsync();
                         await ReplyAsync("Tworzenie roli anulowane");
                         return;
                     }
 
-                    try
+                    if (!int.TryParse(response.Content, out int actionNum))
                     {
-                        var action = (ReactionAction)int.Parse(response.Content);
+                        await msg.DeleteAsync();
+                        await ReplyAsync("Czy na pewno wiadomość zawierała odpowiednią zawartość?");
+                        return;
+                    }
 
-                        if (action == ReactionAction.GiveRemove || action == ReactionAction.Give || action == ReactionAction.Remove)
+                    var action = (ReactionAction)actionNum;
+
+                    if (action == ReactionAction.GiveRemove || action == ReactionAction.Give || action == ReactionAction.Remove)
+                    {
+                        embed = new EmbedBuilder
                         {
-                            embed = new EmbedBuilder
+                            Description = "Podaj reakcję i rolę w formacie: emoji - id roli/wzmianka/nazwa\nPrzykład: 🎶 - 722411980635504647\nNie używaj customowych emoji z innych serwerów!",
+                            Footer = new EmbedFooterBuilder
                             {
-                                Description = "Podaj reakcję i rolę w formacie: emoji - id roli/wzmianka/nazwa\nPrzykład: 🎶 - 722411980635504647\nNie używaj customowych emoji z innych serwerów!",
-                                Footer = new EmbedFooterBuilder
-                                {
-                                    Text = "Krok 3/3 | napisz 'cancel' aby anulować"
-                                }
-                            }.Build();
+                                Text = "Krok 3/3 | napisz 'cancel' aby anulować"
+                            }
+                        }.Build();
 
-                            await response.DeleteAsync();
+                        await response.DeleteAsync();
 
-                            await msg.ModifyAsync((x) =>
+                        await msg.ModifyAsync((x) =>
+                        {
+                            x.Embed = embed;
+                        });
+
+                        response = await NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
+                        if (response == null)
+                        {
+                            await msg.DeleteAsync();
+                            await ReplyAsync("Czas minął, spróbuj jeszcze raz");
+                            return;
+                        }
+                        else if (response.Content.ToLower() == "cancel")
+                        {
+                            await msg.DeleteAsync();
+                            await ReplyAsync("Tworzenie roli anulowane");
+                            return;
+                        }
+
+                        IEmote emote;
+                        if (Emote.TryParse(response.Content.Split('-')[0].Trim(), out Emote emoteTmp))
+                            emote = emoteTmp;
+                        else
+                            emote = new Emoji(response.Content.Split('-')[0].Trim());
+                        if (emote == null)
+                        {
+                            await ReplyAsync("Coś poszło nie tak, miałem problem z tą emotką");
+                            return;
+                        }
+
+                        var roleString = response.Content.Split('-')[1].Trim();
+                        var roleResults = new Dictionary<ulong, TypeReaderValue>();
+
+                        //By Mention (1.0)
+                        if (MentionUtils.TryParseRole(roleString, out var id))
+                            AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 1.00f);
+
+                        //By Id (0.9)
+                        if (ulong.TryParse(roleString, NumberStyles.None, CultureInfo.InvariantCulture, out id))
+                            AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 0.90f);
+
+                        //By Name (0.7-0.8)
+                        foreach (var roleTmp in Context.Guild.Roles.Where(x => string.Equals(roleString, x.Name, StringComparison.OrdinalIgnoreCase)))
+                            AddRoleResult(roleResults, roleTmp as IRole, roleTmp.Name == roleString ? 0.80f : 0.70f);
+
+                        await response.DeleteAsync();
+
+                        if (roleResults.Count == 0)
+                        {
+                            await msg.DeleteAsync();
+                            await ReplyAsync("Coś poszło nie tak, czy rola została dobrze podana?");
+                            return;
+                        }
+
+                        var role = (SocketRole)new List<TypeReaderValue>(roleResults.Values).OrderBy(x => x.Score).First().Value;
+
+                        if (role == null)
+                        {
+                            await msg.DeleteAsync();
+                            await ReplyAsync("Coś poszło nie tak, czy rola została dobrze podana?");
+                            return;
+                        }
+
+                        if (_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId)
+                            && _git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId)
+                            && _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Any(x => x.Roles.ContainsKey(emote.ToString())))
+                        {
+                            await msg.DeleteAsync();
+                            await ReplyAsync("Ta emotka jest już wykorzystana w tej wiadomości na tym kanale");
+                            return;
+                        }
+
+                        if (!_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId))
+                        {
+                            _git.Config.Servers[guildId].ReactionRoles.Add(channelId, new Dictionary<ulong, List<ReactionRole>>());
+                        }
+                        if (!_git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId))
+                        {
+                            _git.Config.Servers[guildId].ReactionRoles[channelId].Add(messageId, new List<ReactionRole>());
+                        }
+
+                        _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Add(new ReactionRole
+                        {
+                            Action = action,
+                            Roles = new Dictionary<string, ulong>()
                             {
-                                x.Embed = embed;
-                            });
+                                { emote.ToString(), role.Id }
+                            }
+                        });
 
+                        await (await Context.Guild.GetTextChannel(channelId).GetMessageAsync(messageId)).AddReactionAsync(emote);
+                        await msg.ModifyAsync((x) =>
+                        {
+                            x.Content = "Utworzono pomyślnie";
+                            x.Embed = null;
+                        });
+                        await _git.UploadConfig();
+                    }
+                    else if (action == ReactionAction.OneOfMany)
+                    {
+                        await response.DeleteAsync();
+
+                        Dictionary<string, ulong> roleKvp = new Dictionary<string, ulong>();
+                        List<IEmote> emotes = new List<IEmote>();
+
+                        embed = new EmbedBuilder
+                        {
+                            Description = "Podaj reakcję i rolę w formacie: emoji - id roli/wzmianka/nazwa\nPrzykład: 🎶 - 722411980635504647\nPodaj co najmniej 2 reakcje\nGdy podasz wszystkie reakcje które chcesz, wyślij wiadomość 'continue'\nNie używaj customowych emoji z innych serwerów!",
+                            Footer = new EmbedFooterBuilder
+                            {
+                                Text = "Krok 3/3 | napisz 'cancel' aby anulować"
+                            }
+                        }.Build();
+                        await msg.ModifyAsync((x) =>
+                        {
+                            x.Embed = embed;
+                        });
+
+                        bool finished = false;
+
+                        do
+                        {
                             response = await NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
                             if (response == null)
                             {
                                 await msg.DeleteAsync();
-                                await ReplyAsync("Czas minął, spróbuj jeszcze raz");
-                                return;
+                                await ReplyAndDeleteAsync("Czas minął, spróbuj jeszcze raz", timeout: TimeSpan.FromSeconds(2));
+                                continue;
                             }
-                            else if (response.Content == "cancel")
+                            else if (response.Content.ToLower() == "cancel")
                             {
                                 await msg.DeleteAsync();
                                 await ReplyAsync("Tworzenie roli anulowane");
                                 return;
                             }
-
-                            try
+                            else if (response.Content.ToLower() == "continue")
                             {
-                                IEmote emote;
-                                if (Emote.TryParse(response.Content.Split('-')[0].Trim(), out Emote emoteTmp))
-                                    emote = emoteTmp;
-                                else
-                                    emote = new Emoji(response.Content.Split('-')[0].Trim());
-                                if (emote == null)
-                                {
-                                    await ReplyAsync("Coś poszło nie tak, spróbuj ponownie później");
-                                    return;
-                                }
-
-                                var roleString = response.Content.Split('-')[1].Trim();
-                                var roleResults = new Dictionary<ulong, TypeReaderValue>();
-
-                                //By Mention (1.0)
-                                if (MentionUtils.TryParseRole(roleString, out var id))
-                                    AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 1.00f);
-
-                                //By Id (0.9)
-                                if (ulong.TryParse(roleString, NumberStyles.None, CultureInfo.InvariantCulture, out id))
-                                    AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 0.90f);
-
-                                //By Name (0.7-0.8)
-                                foreach (var roleTmp in Context.Guild.Roles.Where(x => string.Equals(roleString, x.Name, StringComparison.OrdinalIgnoreCase)))
-                                    AddRoleResult(roleResults, roleTmp as IRole, roleTmp.Name == roleString ? 0.80f : 0.70f);
-
+                                finished = true;
                                 await response.DeleteAsync();
-
-                                if (roleResults.Count == 0)
-                                {
-                                    await msg.DeleteAsync();
-                                    await ReplyAsync("Coś poszło nie tak, czy rola została dobrze podana?");
-                                    return;
-                                }
-
-                                var ordered = new List<TypeReaderValue>(roleResults.Values).OrderBy(x => x.Score).ToList();
-
-                                var role = (SocketRole)ordered[0].Value;
-
-                                if (role == null)
-                                {
-                                    await msg.DeleteAsync();
-                                    await ReplyAsync("Coś poszło nie tak, czy rola została dobrze podana?");
-                                    return;
-                                }
-
-                                if (_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId)
-                                    && _git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId)
-                                    && _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Any(x => x.Roles.ContainsKey(emote.ToString())))
-                                {
-                                    await msg.DeleteAsync();
-                                    await ReplyAsync("Ta emotka jest już wykorzystana w tej wiadomości na tym kanale");
-                                    return;
-                                }
-
-                                if (!_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId))
-                                {
-                                    _git.Config.Servers[guildId].ReactionRoles.Add(channelId, new Dictionary<ulong, List<ReactionRole>>());
-                                }
-                                if (!_git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId))
-                                {
-                                    _git.Config.Servers[guildId].ReactionRoles[channelId].Add(messageId, new List<ReactionRole>());
-                                }
-
-                                _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Add(new ReactionRole
-                                {
-                                    Action = action,
-                                    Roles = new Dictionary<string, ulong>()
-                                    {
-                                        { emote.ToString(), role.Id }
-                                    }
-                                });
-
-                                await (await Context.Guild.GetTextChannel(channelId).GetMessageAsync(messageId)).AddReactionAsync(emote);
-                                await msg.ModifyAsync((x) =>
-                                {
-                                    x.Content = "Utworzono pomyślnie";
-                                    x.Embed = null;
-                                });
-                                await _git.UploadConfig();
-
+                                continue;
                             }
-                            catch (Exception ex)
+
+                            IEmote emote;
+                            if (Emote.TryParse(response.Content.Split('-')[0].Trim(), out Emote emoteTmp))
+                                emote = emoteTmp;
+                            else
+                                emote = new Emoji(response.Content.Split('-')[0].Trim());
+                            if (emote == null)
                             {
-                                await msg.DeleteAsync();
-                                await response.DeleteAsync();
-                                await ReplyAsync($"Coś poszło nie tak, czy wiadomość była dobrze sformatowana? - {ex}");
-                                return;
+                                await ReplyAndDeleteAsync("Coś poszło nie tak, spróbuj ponownie lub anuluj", timeout: TimeSpan.FromSeconds(2));
+                                continue;
                             }
-                        }
-                        else if (action == ReactionAction.OneOfMany)
-                        {
+
+                            var roleString = response.Content.Split('-')[1].Trim();
+                            var roleResults = new Dictionary<ulong, TypeReaderValue>();
+
+                            //By Mention (1.0)
+                            if (MentionUtils.TryParseRole(roleString, out var id))
+                                AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 1.00f);
+
+                            //By Id (0.9)
+                            if (ulong.TryParse(roleString, NumberStyles.None, CultureInfo.InvariantCulture, out id))
+                                AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 0.90f);
+
+                            //By Name (0.7-0.8)
+                            foreach (var roleTmp in Context.Guild.Roles.Where(x => string.Equals(roleString, x.Name, StringComparison.OrdinalIgnoreCase)))
+                                AddRoleResult(roleResults, roleTmp as IRole, roleTmp.Name == roleString ? 0.80f : 0.70f);
+
                             await response.DeleteAsync();
 
-                            Dictionary<string, ulong> roleKvp = new Dictionary<string, ulong>();
-                            Queue<IEmote> emotes = new Queue<IEmote>();
-
-                            embed = new EmbedBuilder
+                            if (roleResults.Count == 0)
                             {
-                                Description = "Podaj reakcję i rolę w formacie: emoji - id roli/wzmianka/nazwa\nPrzykład: 🎶 - 722411980635504647\nPodaj co najmniej 2 reakcje\nGdy podasz wszystkie reakcje które chcesz, wyślij wiadomość 'continue'\nNie używaj customowych emoji z innych serwerów!",
-                                Footer = new EmbedFooterBuilder
-                                {
-                                    Text = "Krok 3/3 | napisz 'cancel' aby anulować"
-                                }
-                            }.Build();
-                            await msg.ModifyAsync((x) =>
+                                await ReplyAndDeleteAsync("Coś poszło nie tak, czy rola została dobrze podana?", timeout: TimeSpan.FromSeconds(2));
+                                continue;
+                            }
+
+                            var role = (SocketRole)new List<TypeReaderValue>(roleResults.Values).OrderBy(x => x.Score).First().Value;
+
+                            if (role == null)
                             {
-                                x.Embed = embed;
-                            });
+                                await ReplyAndDeleteAsync("Coś poszło nie tak, czy rola została dobrze podana?", timeout: TimeSpan.FromSeconds(2));
+                                continue;
+                            }
 
-                            bool finished = false;
-
-                            do
+                            if (_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId)
+                                && _git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId)
+                                && _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Any(x => x.Roles.ContainsKey(emote.ToString())))
                             {
-                                response = await NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
-                                if (response == null)
-                                {
-                                    await msg.DeleteAsync();
-                                    await ReplyAndDeleteAsync("Czas minął, spróbuj jeszcze raz", timeout: TimeSpan.FromSeconds(2));
-                                    continue;
-                                }
-                                else if (response.Content == "cancel")
-                                {
-                                    await msg.DeleteAsync();
-                                    await ReplyAsync("Tworzenie roli anulowane");
-                                    return;
-                                }
-                                else if (response.Content == "continue")
-                                {
-                                    finished = true;
-                                    await response.DeleteAsync();
-                                    continue;
-                                }
+                                await ReplyAndDeleteAsync("Ta emotka jest już wykorzystana w tej wiadomości na tym kanale", timeout: TimeSpan.FromSeconds(2));
+                                continue;
+                            }
 
-                                IEmote emote;
-                                if (Emote.TryParse(response.Content.Split('-')[0].Trim(), out Emote emoteTmp))
-                                    emote = emoteTmp;
-                                else
-                                    emote = new Emoji(response.Content.Split('-')[0].Trim());
-                                if (emote == null)
-                                {
-                                    await ReplyAndDeleteAsync("Coś poszło nie tak, spróbuj ponownie lub anuluj", timeout: TimeSpan.FromSeconds(2));
-                                    continue;
-                                }
+                            await ReplyAndDeleteAsync("Dodano rolę", timeout: TimeSpan.FromSeconds(1));
 
-                                var roleString = response.Content.Split('-')[1].Trim();
-                                var roleResults = new Dictionary<ulong, TypeReaderValue>();
+                            emotes.Add(emote);
 
-                                //By Mention (1.0)
-                                if (MentionUtils.TryParseRole(roleString, out var id))
-                                    AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 1.00f);
+                            roleKvp.Add(emote.ToString(), role.Id);
 
-                                //By Id (0.9)
-                                if (ulong.TryParse(roleString, NumberStyles.None, CultureInfo.InvariantCulture, out id))
-                                    AddRoleResult(roleResults, Context.Guild.GetRole(id) as IRole, 0.90f);
+                        } while (!finished);
 
-                                //By Name (0.7-0.8)
-                                foreach (var roleTmp in Context.Guild.Roles.Where(x => string.Equals(roleString, x.Name, StringComparison.OrdinalIgnoreCase)))
-                                    AddRoleResult(roleResults, roleTmp as IRole, roleTmp.Name == roleString ? 0.80f : 0.70f);
+                        if (!_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId))
+                            _git.Config.Servers[guildId].ReactionRoles.Add(channelId, new Dictionary<ulong, List<ReactionRole>>());
+                        if (!_git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId))
+                            _git.Config.Servers[guildId].ReactionRoles[channelId].Add(messageId, new List<ReactionRole>());
 
-                                await response.DeleteAsync();
+                        _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Add(new ReactionRole
+                        {
+                            Action = action,
+                            Roles = roleKvp
+                        });
 
-                                if (roleResults.Count == 0)
-                                {
-                                    await ReplyAndDeleteAsync("Coś poszło nie tak, czy rola została dobrze podana?", timeout: TimeSpan.FromSeconds(2));
-                                    continue;
-                                }
+                        foreach (var emote in emotes)
+                            await (await Context.Guild.GetTextChannel(channelId).GetMessageAsync(messageId)).AddReactionAsync(emote);
 
-                                var ordered = new List<TypeReaderValue>(roleResults.Values).OrderBy(x => x.Score).ToList();
-
-                                var role = (SocketRole)ordered[0].Value;
-
-                                if (role == null)
-                                {
-                                    await ReplyAndDeleteAsync("Coś poszło nie tak, czy rola została dobrze podana?", timeout: TimeSpan.FromSeconds(2));
-                                    continue;
-                                }
-
-                                if (_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId)
-                                    && _git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId)
-                                    && _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Any(x => x.Roles.ContainsKey(emote.ToString())))
-                                {
-                                    await ReplyAndDeleteAsync("Ta emotka jest już wykorzystana w tej wiadomości na tym kanale", timeout: TimeSpan.FromSeconds(2));
-                                    continue;
-                                }
-
-                                await ReplyAndDeleteAsync("Dodano rolę", timeout: TimeSpan.FromSeconds(1));
-
-                                emotes.Enqueue(emote);
-
-                                roleKvp.Add(emote.ToString(), role.Id);
-
-                            } while (!finished);
-
-                            if (!_git.Config.Servers[guildId].ReactionRoles.ContainsKey(channelId))
-                                 _git.Config.Servers[guildId].ReactionRoles.Add(channelId, new Dictionary<ulong, List<ReactionRole>>());
-                            if (!_git.Config.Servers[guildId].ReactionRoles[channelId].ContainsKey(messageId))
-                                 _git.Config.Servers[guildId].ReactionRoles[channelId].Add(messageId, new List<ReactionRole>());
-
-                            _git.Config.Servers[guildId].ReactionRoles[channelId][messageId].Add(new ReactionRole
-                            {
-                                Action = action,
-                                Roles = roleKvp
-                            });
-
-                            foreach (var emote in emotes)
-                                await (await Context.Guild.GetTextChannel(channelId).GetMessageAsync(messageId)).AddReactionAsync(emote);
-
-                            await msg.ModifyAsync((x) =>
-                            {
-                                x.Content = "Utworzono pomyślnie";
-                                x.Embed = null;
-                            });
-                            await _git.UploadConfig();
-                        }
+                        await msg.ModifyAsync((x) =>
+                        {
+                            x.Content = "Utworzono pomyślnie";
+                            x.Embed = null;
+                        });
+                        await _git.UploadConfig();
                     }
-                    catch (Exception ex)
+                    else
                     {
                         await msg.DeleteAsync();
-                        await response.DeleteAsync();
-                        await ReplyAsync($"Coś poszło nie tak, czy cyfra jest prawidłowa? - {ex}");
-                        return;
+                        await ReplyAndDeleteAsync($"Zły numer - powinien być: 0, 1, 2, 3; otrzymano: {actionNum}", timeout: TimeSpan.FromSeconds(5));
                     }
-                }
-                catch (Exception ex)
-                {
-                    await response.DeleteAsync();
-                    await ReplyAsync($"Coś poszło nie tak, czy link do wiadomości jest prawidłowy? - {ex}");
-                    return;
                 }
             }
 
@@ -771,8 +728,7 @@ namespace DygBot.Modules
             }
         }
 
-        [Group("reactionlimit")]
-        [Alias("rl")]
+        [Group("rl")]
         public class ReactionLimitClass : InteractiveBase<SocketCommandContext>
         {
             private readonly GitHubService _git;

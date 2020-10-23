@@ -66,7 +66,6 @@ namespace DygBot.Modules
         }
 
         [Command("test")]
-        [Summary("test")]
         [RequireUser(312223735505747968)]
         public async Task TestAsync()
         {

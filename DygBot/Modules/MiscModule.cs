@@ -269,7 +269,7 @@ namespace DygBot.Modules
 
                 if (channelId == 0)
                 {
-                    await ReplyAsync("Zestaw roli które masz nie pozwala na postowanie anonimowych zdjęć na kanałach OC");
+                    await ReplyAsync("Twój zestaw roli nie pozwala na wysyłanie anonimowych zdjęć na kanałach OC.");
                     await Task.Delay(10000);
                     await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
                     await DeleteAllChannelMessagesAsync(Context.Channel as SocketTextChannel);

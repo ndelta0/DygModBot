@@ -353,7 +353,7 @@ namespace DygBot.Modules
                 { }
 
                 if (_git.Config.Servers[Context.Guild.Id].LogChannel != default)
-                    await Context.Guild.GetTextChannel(768175447728062475).SendMessageAsync(embed: logEmbed);
+                    await Context.Guild.GetTextChannel(_git.Config.Servers[Context.Guild.Id].LogChannel).SendMessageAsync(embed: logEmbed);
 
                 await Task.Delay(5000);
                 await embedMsg.DeleteAsync();

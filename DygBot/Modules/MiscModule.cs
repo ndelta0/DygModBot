@@ -364,41 +364,22 @@ namespace DygBot.Modules
 
         private async Task DeleteAllChannelMessagesAsync(SocketTextChannel channel)
         {
-            var bulkDelete = new List<SocketMessage>();
-            var individualDelete = new List<SocketMessage>();
-            var awaiters = new List<Task>();
-
             bool moreRemaining = true;
             ulong lastMsgId = 0;
             do
             {
                 var tmpMsgs = lastMsgId != 0 ? channel.GetMessagesAsync(lastMsgId, Direction.Before) : channel.GetMessagesAsync();
-                moreRemaining = await tmpMsgs.CountAsync() > 0;
 
-                await foreach (var l in tmpMsgs)
+                var msgs = await tmpMsgs.FlattenAsync();
+                moreRemaining = msgs.Count() > 0;
+                if (!moreRemaining)
+                    continue;
+                msgs.ToList().ForEach(async x =>
                 {
-                    l.ToList().ForEach(x =>
-                    {
-                        if (x.CreatedAt.CompareTo(DateTimeOffset.UtcNow) > 0)
-                            bulkDelete.Add(x as SocketMessage);
-                        else
-                            individualDelete.Add(x as SocketMessage);
-                    });
-                }
+                    await x.DeleteAsync();
+                });
+                lastMsgId = msgs.Last().Id;
             } while (moreRemaining);
-
-            awaiters.Add(channel.DeleteMessagesAsync(bulkDelete));
-
-            individualDelete.ForEach(x =>
-            {
-                try
-                {
-                    awaiters.Add(x.DeleteAsync());
-                }
-                catch { }
-            });
-
-            Task.WaitAll(awaiters.ToArray());
         }
     }
 }

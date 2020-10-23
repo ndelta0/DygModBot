@@ -63,8 +63,10 @@ namespace DygBot.Services
 
                     IActivity activity = new Game($"Build nr {amount}");
                     await _discord.SetActivityAsync(activity);
+                    await _discord.SetStatusAsync(UserStatus.DoNotDisturb);
                     await Task.Delay(TimeSpan.FromMinutes(1));
                     await _discord.SetActivityAsync(null);
+                    await _discord.SetStatusAsync(UserStatus.Online);
                 });
             };
 

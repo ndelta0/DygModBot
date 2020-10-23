@@ -345,7 +345,12 @@ namespace DygBot.Modules
                    .AddField("Kanał", $"{Context.Guild.GetTextChannel(channelId).Mention}")
                    .Build();
 
-                await response.DeleteAsync();
+                try
+                {
+                    await response.DeleteAsync();
+                }
+                catch
+                { }
 
                 if (_git.Config.Servers[Context.Guild.Id].LogChannel != default)
                     await Context.Guild.GetTextChannel(768175447728062475).SendMessageAsync(embed: logEmbed);

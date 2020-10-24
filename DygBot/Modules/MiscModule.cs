@@ -162,7 +162,7 @@ namespace DygBot.Modules
                 else if (response.Attachments.Count != 1)
                 {
                     await embedMsg.DeleteAsync();
-                    await ReplyAsync($"Anulowano. Otrzymano zdjęć: {response.Attachments.Count} - oczekiwano: 1");
+                    await ReplyAsync($"Anulowano. Otrzymano zdjęć: {response.Attachments.Count}\nOczekiwano: 1");
                     await Task.Delay(5000);
                     await user.RemoveRoleAsync(Context.Guild.GetRole(ulong.Parse(_git.Config.Servers[Context.Guild.Id].AdditionalConfig["oc.postRole"])));
                     await DeleteAllChannelMessagesAsync(Context.Channel as SocketTextChannel);

@@ -93,7 +93,7 @@ namespace DygBot.Services
                 .Build();
             ITrigger clearTrigger = TriggerBuilder.Create()
                 .WithIdentity("cleatVcChatTrigger", "discordGroup")
-                .WithCronSchedule("0 0 4 1/1 * ? *")
+                .WithCronSchedule("0 0 5 1/1 * ? *")
                 .StartNow()
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(1).WithRepeatCount(0))
@@ -107,7 +107,7 @@ namespace DygBot.Services
                 .WithIdentity("lockdownBeginTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 1 1/1 * ? *")
+                .WithCronSchedule("0 0 2 1/1 * ? *")
                 .StartNow()
                 .Build();
 
@@ -119,7 +119,7 @@ namespace DygBot.Services
                 .WithIdentity("lockdownEndTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 5 1/1 * ? *")
+                .WithCronSchedule("0 0 6 1/1 * ? *")
                 .StartNow()
                 .Build();
 

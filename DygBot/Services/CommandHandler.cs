@@ -94,7 +94,7 @@ namespace DygBot.Services
             var message = await userCacheable.GetOrDownloadAsync();
 
             // Check if underage was selected
-            if (sockReaction.Emote.ToString() == "🚫" && channel.Id == 737304061862477834 && guild.Id == 683084560451633212)
+            if (sockReaction.Emote.ToString() == "🚫" && (channel.Id == 737304061862477834 || channel.Id == 683283482109411328) && guild.Id == 683084560451633212)
             {
                 var inviteLink = await guild.DefaultChannel.CreateInviteAsync(null, null, false, false);
                 var dmChannel = await user.GetOrCreateDMChannelAsync();

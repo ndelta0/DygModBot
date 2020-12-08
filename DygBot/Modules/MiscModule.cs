@@ -74,7 +74,7 @@ namespace DygBot.Modules
                     await ReplyAndDeleteAsync("Anonimowe wysyłanie wiadomości nie jest włączone na tym serwerze", timeout: TimeSpan.FromSeconds(5));
                     return;
                 }
-                if (_discord.GetGuild(683084560451633212).GetUser(Context.User.Id) == null)
+                if (!Context.User.MutualGuilds.Contains(_discord.GetGuild(683084560451633212)))
                 {
                     await Context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
                     return;

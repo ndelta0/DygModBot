@@ -69,15 +69,20 @@ namespace DygBot.Modules
         {
             if (Context.IsPrivate)
             {
+                
                 if (_git.Config.Servers[683084560451633212].OcChannels.Count == 0)
                 {
                     await ReplyAndDeleteAsync("Anonimowe wysyłanie wiadomości nie jest włączone na tym serwerze", timeout: TimeSpan.FromSeconds(5));
                     return;
                 }
-                if (!Context.User.MutualGuilds.Contains(_discord.GetGuild(683084560451633212)))
+                if (_discord.GetGuild(683084560451633212).GetUser(Context.User.Id) == null)
                 {
-                    await Context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
-                    return;
+                    await _discord.GetGuild(683084560451633212).DownloadUsersAsync();
+                    if (_discord.GetGuild(683084560451633212).GetUser(Context.User.Id) == null)
+                    {
+                        await Context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
+                        return;
+                    }
                 }
                 else if (_discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"])).Members.Count() > 0)
                 {

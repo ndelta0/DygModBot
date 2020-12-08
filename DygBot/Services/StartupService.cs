@@ -278,7 +278,7 @@ namespace DygBot.Services
         }
         public class HalfAnHourJob : IJob
         {
-            private readonly SubredditSource[] sources =
+            private readonly SubredditSource[] _sources =
             {
                 new SubredditSource
                 {
@@ -388,7 +388,7 @@ namespace DygBot.Services
                 {
                     foreach (var config in guild.Value.HalfAnHourConfig)
                     {
-                        var source = sources.Where(x => x.Gender.HasFlag(config.Value)).Random();
+                        var source = _sources.Where(x => x.Gender.HasFlag(config.Value)).Random();
                         var list = reddit.Subreddit(source.SubredditName).Posts.GetTop("hour").Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
                         if (list.Count() == 0)
                             list = reddit.Subreddit(source.SubredditName).Posts.GetNew().Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));

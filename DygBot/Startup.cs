@@ -2,6 +2,8 @@
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
+
+using DygBot.Addons;
 using DygBot.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +67,7 @@ namespace DygBot
                 .AddSingleton<LoggingService>() // Add the logging service to the collection
                 .AddSingleton<Random>()      // Add random to the collection
                 .AddSingleton<InteractiveService>()
+                .AddSingleton<ExtendedInteractiveService>()
                 .AddSingleton(prov =>
                 {
                     var git = prov.GetRequiredService<GitHubService>();

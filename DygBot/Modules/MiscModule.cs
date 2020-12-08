@@ -220,9 +220,9 @@ namespace DygBot.Modules
             }
         }
 
-        [Command("apply")]
+        [Command("new")]
         [Scope(Scope.DM)]
-        public async Task ApplyAsync()
+        public async Task NewAsync()
         {
             //_discord.GetGuild(685477359213608960).GetTextChannel(688410550056648795)
 

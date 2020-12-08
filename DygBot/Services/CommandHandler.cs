@@ -65,7 +65,7 @@ namespace DygBot.Services
                     await _discord.SetActivityAsync(activity);
                     await _discord.SetStatusAsync(UserStatus.DoNotDisturb);
                     await Task.Delay(TimeSpan.FromMinutes(1));
-                    await _discord.SetActivityAsync(new Game("db!oc | DM me"));
+                    await _discord.SetActivityAsync(new Game("db!new | db!oc | DM me"));
                     await _discord.SetStatusAsync(UserStatus.Online);
                 });
             };

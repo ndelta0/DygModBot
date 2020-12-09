@@ -55,5 +55,8 @@ namespace DygBot
             }
             return user;
         }
+
+        public static string GetAvatarUrlSafe(this IUser user, ImageFormat format = ImageFormat.Auto, ushort size = 128)
+            => user.GetAvatarUrl(format, size) ?? user.GetDefaultAvatarUrl();
     }
 }

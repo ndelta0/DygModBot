@@ -196,7 +196,7 @@ namespace DygBot.Modules
                    .WithTitle("Anonimowe zdjęcie na OC")
                    .WithDescription("======================")
                    .WithColor(_git.Config.Servers[Context.Guild.Id].ServerColor)
-                   .WithThumbnailUrl(Context.Message.Author.GetAvatarUrl())
+                   .WithThumbnailUrl(Context.Message.Author.GetAvatarUrlSafe())
                    .WithImageUrl(discordUrl)
                    .AddField("Użytkownik", $"{Context.Message.Author.Mention} ({Context.Message.Author.Id})")
                    .AddField("Opis", $"{(string.IsNullOrWhiteSpace(description) ? "(brak)" : description)}")
@@ -228,7 +228,7 @@ namespace DygBot.Modules
 
             var embed = new EmbedBuilder()
                     .WithTitle("Pytanie 1/3")
-                    .WithDescription($"Jakiej jesteś płci?\n\nMożliwe odpowiedzi:\n1 - Kobieta\n2 - Mężczyzna\n4 - Inna")
+                    .WithDescription($"Jakiej jesteś płci?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -251,19 +251,11 @@ namespace DygBot.Modules
                 await Task.Delay(5000);
                 return;
             }
-            else if (response.Content != "1" && response.Content != "2" && response.Content != "4")
-            {
-                await embedMsg.DeleteAsync();
-                await ReplyAsync($"Anulowano. Otrzymano: '{response.Content}'\nOczekiwano: 1, 2 lub 4");
-                await Task.Delay(5000);
-                return;
-            }
-            var gender = (Gender)int.Parse(response.Content);
+            var genderStr = response.Content;
 
-            int age = 0;
             embed = new EmbedBuilder()
                     .WithTitle("Pytanie 2/3")
-                    .WithDescription($"Ile masz lat (napisz cyfrą)?")
+                    .WithDescription($"Ile masz lat?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -284,17 +276,11 @@ namespace DygBot.Modules
                 await ReplyAsync("Wysyłanie ankiety anulowane");
                 return;
             }
-            else if (!int.TryParse(response.Content, out age))
-            {
-                await embedMsg.DeleteAsync();
-                await ReplyAsync($"Anulowano. Otrzymano: '{response.Content}'\nOczekiwano: cyfra");
-                return;
-            }
+            var ageStr = response.Content;
 
-            bool dmOpen = false;
             embed = new EmbedBuilder()
                     .WithTitle("Pytanie 3/3")
-                    .WithDescription($"Czy chcesz otrzymywać wiadomości prywatne od innych członków Dygawki?\n\nJeśli chcesz, wyślij 'Tak', 'True', 'Y' lub '1'\nJeśli nie chcesz, wyślij 'Nie', 'False', 'N' lub '0'")
+                    .WithDescription($"Czy chcesz otrzymywać wiadomości prywatne od innych użytkowników?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -315,12 +301,7 @@ namespace DygBot.Modules
                 await ReplyAsync("Wysyłanie ankiety anulowane");
                 return;
             }
-            else if (!ExtendedBoolTryParse(response.Content, out dmOpen))
-            {
-                await embedMsg.DeleteAsync();
-                await ReplyAsync($"Anulowano. Otrzymano: '{response.Content}'\nOczekiwano: którekolwiek z ('Tak', 'Nie', 'True', 'False', 'Y', 'N', '1', '0')");
-                return;
-            }
+            var dmOpenStr = response.Content;
 
             var channel = _discord.GetGuild(683084560451633212).GetTextChannel(779049131028643860);
 
@@ -331,11 +312,11 @@ namespace DygBot.Modules
                     .WithDescription("================")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithCurrentTimestamp()
-                    .WithThumbnailUrl(Context.User.GetAvatarUrl())
+                    .WithThumbnailUrl(Context.User.GetAvatarUrlSafe())
                     .AddField("Użytkownik", $"{Context.User.Mention} ({Context.User.Id})")
-                    .AddField("Płeć", gender.ToLocalString())
-                    .AddField("Wiek", age, true)
-                    .AddField("Wiadomości", dmOpen.ToLocalString(), true)
+                    .AddField("Płeć", genderStr)
+                    .AddField("Wiek", ageStr, true)
+                    .AddField("Wiadomości", dmOpenStr, true)
                     .Build()
             };
             actioner.EmoteActions.Add(new EmoteAction
@@ -535,7 +516,7 @@ namespace DygBot.Modules
 
             await ExtendedInteractive.SendActionerMessageAsync(channel, actioner);
 
-            await ReplyAsync("Ankieta została wysłana, moderacja nada ci odpowiednie role w jak najkrótszym czasie.");
+            await ReplyAsync("Dziękujemy za wypełnienie aplikacji. Twoje role zostaną przyznane przez administrację najszybciej jak to możliwe.");
         }
 
         private async Task DeleteAllChannelMessagesAsync(SocketTextChannel channel)

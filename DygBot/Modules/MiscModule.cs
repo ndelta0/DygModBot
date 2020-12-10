@@ -507,7 +507,7 @@ namespace DygBot.Modules
                 {
                     Added = new Func<Task<bool>>(async () =>
                     {
-                        await Context.User.SendMessageAsync("Twoja ankieta została odrzucona, wyślij ją ponownie lub skontaktuj się z moderatorem lub administratorem.");
+                        await Context.User.SendMessageAsync("Twoja ankieta została odrzucona. Wyślij ją ponownie lub skontaktuj się z administracją.");
 
                         return true;
                     })

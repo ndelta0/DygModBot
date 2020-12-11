@@ -22,14 +22,14 @@ namespace DygBot.Preconditions
                 if (_scope == Scope.DM)
                     return Task.FromResult(PreconditionResult.FromSuccess());
                 else
-                    return Task.FromResult(PreconditionResult.FromError("Invalid channel"));
+                    return Task.FromResult(PreconditionResult.FromError("Komenda działa tylko w wiadomości prywatnej"));
             else if (context.Channel is SocketGuildChannel)
                 if (_scope == Scope.Guild)
                     return Task.FromResult(PreconditionResult.FromSuccess());
                 else
-                    return Task.FromResult(PreconditionResult.FromError("Invalid channel"));
+                    return Task.FromResult(PreconditionResult.FromError("Komenda działa tylko na serwerze"));
             else
-                return Task.FromResult(PreconditionResult.FromError("Unknown error"));
+                return Task.FromResult(PreconditionResult.FromError("Nieznany błąd"));
         }
     }
 

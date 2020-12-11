@@ -460,7 +460,14 @@ namespace DygBot.Services
                                     if (result.ErrorReason == "Module precondition group Permission failed")
                                         await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia - nie masz wymaganych uprawnień");
                                     else
-                                        await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia");
+                                    {
+                                        if (result.ErrorReason == "Komenda działa tylko w wiadomości prywatnej" || result.ErrorReason == "Komenda działa tylko na serwerze")
+                                        {
+                                            await context.Channel.SendMessageAsync(result.ErrorReason);
+                                        }
+                                        else
+                                            await context.Channel.SendMessageAsync("Nie spełniasz wymogów polecenia");
+                                    }
                                     break;
                                 case CommandError.Unsuccessful:
                                 case CommandError.Exception:

@@ -55,12 +55,13 @@ namespace DygBot.Services
             if (string.IsNullOrWhiteSpace(discordToken)) // Check if token is valid
                 throw new ArgumentNullException("Discord token not provided");  // Throw exception if token is invalid
 
-            while (_discord.ConnectionState != ConnectionState.Connected)
+            while (true)
             {
                 try
                 {
                     await _discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
                     await _discord.StartAsync();    // Connect to the websocket
+                    break;
                 }
                 catch (HttpException he)
                 {
@@ -71,7 +72,7 @@ namespace DygBot.Services
                 catch (Exception e)
                 {
                     await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
-                } 
+                }
             }
 
             // Create datamap with required objects

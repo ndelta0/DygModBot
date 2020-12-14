@@ -1,0 +1,33 @@
+name: .NET
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-16.04
+    
+    steps:
+      - uses: actions/checkout@v2
+        
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.101
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+        
+      - name: Publish with dotnet
+        run: dotnet publish -c Release -r linux-x64 --self-contained false
+        
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name:  ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: New release from master
+          draft: false
+          prelease: false

@@ -3,8 +3,23 @@ name: .NET
 on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-16.04
+  release:
+    name: Release
+    strategy:
+      matrix:
+        kind: ['linux', 'windows', 'macOS']
+        include:
+          - kind: linux
+            os: ubuntu-latest
+            target: linux-x64
+          - kind: windows
+            os: windows-latest
+            target: win-x64
+          - kind: macOS
+            os: macos-latest
+            target: osx-x64
+
+    runs-on: ${{ matrix.os }}
     
     steps:
       - uses: actions/checkout@v2
@@ -18,16 +33,23 @@ jobs:
         run: dotnet build --configuration Release
         
       - name: Publish with dotnet
-        run: dotnet publish -c Release -r linux-x64 --self-contained false
+        run: |
+          tag = $(git describe --tags --abbrev=0)
+          release_name="App-$tag-%{{ matrix.target }}"
+          
+          dotnet publish DygBot/DygBot.csproj --runtime "${{ matrix.target }}" -c Release -o "$release_name"
+          
+          if [ "${{ matrix.target}} == "win-x64" ]; then
+            7z a -tzip "${release_name}.zip" "./${release_name}/*"
+          else
+            tar czvf "${release_name}.tar.gz" "$release_name"
+          fi
+          
+          rm -r "$release_name"
         
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name:  ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: New release from master
-          draft: false
-          prelease: false
+          files: "App*"
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

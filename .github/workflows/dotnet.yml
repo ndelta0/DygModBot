@@ -34,7 +34,7 @@ jobs:
         
       - name: Publish with dotnet
         run: |
-          $tag = $(git describe --tags --abbrev=0)
+          $tag = $(git rev-parse --short HEAD)
           $release_name="App-$tag-%{{ matrix.target }}"
           
           dotnet publish DygBot/DygBot.csproj --runtime "${{ matrix.target }}" -c Release -o "$release_name"

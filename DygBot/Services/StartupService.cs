@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.API;
 using Discord.Commands;
+using Discord.Net;
 using Discord.WebSocket;
 using DygBot.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,14 +55,23 @@ namespace DygBot.Services
             if (string.IsNullOrWhiteSpace(discordToken)) // Check if token is valid
                 throw new ArgumentNullException("Discord token not provided");  // Throw exception if token is invalid
 
-            try
+            while (_discord.ConnectionState != ConnectionState.Connected)
             {
-                await _discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
-                await _discord.StartAsync();    // Connect to the websocket
-            }
-            catch (Exception e)
-            {
-                await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
+                try
+                {
+                    await _discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
+                    await _discord.StartAsync();    // Connect to the websocket
+                }
+                catch (HttpException he)
+                {
+                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Discord", he.Message));
+                    await Task.Delay(TimeSpan.FromSeconds(10));
+                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", "Trying to start again"));
+                }
+                catch (Exception e)
+                {
+                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
+                } 
             }
 
             // Create datamap with required objects

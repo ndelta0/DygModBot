@@ -3,6 +3,11 @@ using Discord.Commands;
 using Discord.WebSocket;
 using System;
 using System.Threading.Tasks;
+using Serilog;
+using Serilog.Sinks.File;
+using Serilog.Sinks.SystemConsole;
+using Serilog.Sinks.Async;
+using System.IO;
 
 namespace DygBot.Services
 {
@@ -14,6 +19,12 @@ namespace DygBot.Services
         // DiscordSocketClient and CommandService are injected automatically from the IServiceProvider
         public LoggingService(DiscordSocketClient discord, CommandService commands)
         {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Async(a => a.File(Path.Combine("logs", "mainlog-.log"), rollingInterval: RollingInterval.Day))
+                .WriteTo.Async(a => a.Console())
+                .CreateLogger();
+
             _discord = discord;
             _commands = commands;
 
@@ -23,43 +34,55 @@ namespace DygBot.Services
 
         public Task OnLogAsync(LogMessage msg)
         {
+            var source = msg.Source;
+            var message = msg.Message ?? "";
+            var exception = msg.Exception;
+
             switch (msg.Severity)
             {
+                default:
                 case LogSeverity.Debug:
-                    Console.ForegroundColor = ConsoleColor.White;
+                    if (exception == null)
+                        Log.Debug("[{Source}] {Message}", source, message);
+                    else
+                        Log.Debug(exception, "[{Source}] {Message}", source, message);
                     break;
 
                 case LogSeverity.Verbose:
-                    Console.ForegroundColor = ConsoleColor.White;
+                    if (exception == null)
+                        Log.Verbose("[{Source}] {Message}", source, message);
+                    else
+                        Log.Verbose(exception, "[{Source}] {Message}", source, message);
                     break;
 
                 case LogSeverity.Info:
-                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    if (exception == null)
+                        Log.Information("[{Source}] {Message}", source, message);
+                    else
+                        Log.Information(exception, "[{Source}] {Message}", source, message);
                     break;
 
                 case LogSeverity.Warning:
-                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    if (exception == null)
+                        Log.Warning("[{Source}] {Message}", source, message);
+                    else
+                        Log.Warning(exception, "[{Source}] {Message}", source, message);
                     break;
 
                 case LogSeverity.Error:
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    if (exception == null)
+                        Log.Error("[{Source}] {Message}", source, message);
+                    else
+                        Log.Error(exception, "[{Source}] {Message}", source, message);
                     break;
 
                 case LogSeverity.Critical:
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.BackgroundColor = ConsoleColor.Red;
-                    break;
-
-                default:
-                    Console.ResetColor();
+                    if (exception == null)
+                        Log.Fatal("[{Source}] {Message}", source, message);
+                    else
+                        Log.Fatal(exception, "[{Source}] {Message}", source, message);
                     break;
             }
-
-            string log = $"[{DateTime.UtcNow.ToLongTimeString()} - {DateTime.UtcNow.ToShortDateString()}] "
-                + $"[{msg.Source}/{msg.Severity}]\t{msg.Exception?.ToString() ?? msg.Message}";
-
-            Console.WriteLine(log);
-            Console.ResetColor();
 
             return Task.CompletedTask;
         }

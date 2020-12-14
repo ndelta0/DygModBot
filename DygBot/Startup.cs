@@ -13,6 +13,8 @@ using Quartz.Impl;
 
 using Reddit;
 
+using Serilog;
+
 using System;
 using System.Collections.Specialized;
 using System.Net.Http;
@@ -37,6 +39,7 @@ namespace DygBot
             var scheduler = provider.GetRequiredService<IScheduler>();
             await scheduler.Start();
             await Task.Delay(-1);   // Keep the program alive
+            Log.CloseAndFlush();
             await scheduler.Shutdown();
         }
 

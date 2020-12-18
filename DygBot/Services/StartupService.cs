@@ -53,7 +53,7 @@ namespace DygBot.Services
             await _gitHub.DownloadConfig();
             var discordToken = _gitHub.Config.DiscordToken; // Get Discord token
             if (string.IsNullOrWhiteSpace(discordToken)) // Check if token is valid
-                throw new ArgumentNullException("Discord token not provided");  // Throw exception if token is invalid
+                throw new ArgumentNullException(discordToken);  // Throw exception if token is invalid
 
             while (true)
             {

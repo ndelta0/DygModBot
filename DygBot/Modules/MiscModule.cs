@@ -228,7 +228,7 @@ namespace DygBot.Modules
 
             var embed = new EmbedBuilder()
                     .WithTitle("Pytanie 1/3")
-                    .WithDescription($"Jakiej jesteś płci?")
+                    .WithDescription("Jakiej jesteś płci?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -255,7 +255,7 @@ namespace DygBot.Modules
 
             embed = new EmbedBuilder()
                     .WithTitle("Pytanie 2/3")
-                    .WithDescription($"Ile masz lat?")
+                    .WithDescription("Ile masz lat?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -280,7 +280,7 @@ namespace DygBot.Modules
 
             embed = new EmbedBuilder()
                     .WithTitle("Pytanie 3/3")
-                    .WithDescription($"Czy chcesz otrzymywać wiadomości prywatne od innych użytkowników?")
+                    .WithDescription("Czy chcesz otrzymywać wiadomości prywatne od innych użytkowników?")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
                     .WithFooter(footer =>
                     {
@@ -308,6 +308,7 @@ namespace DygBot.Modules
             var actioner = new ActionerMessage
             {
                 Embed = new EmbedBuilder()
+                    .WithAuthor($"{Context.User.Username}#{Context.User.Discriminator}")
                     .WithTitle("Wypełniona ankieta")
                     .WithDescription("================")
                     .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
@@ -317,7 +318,8 @@ namespace DygBot.Modules
                     .AddField("Płeć", genderStr)
                     .AddField("Wiek", ageStr, true)
                     .AddField("Wiadomości", dmOpenStr, true)
-                    .Build()
+                    .Build(),
+                Content = Context.User.Mention
             };
             actioner.EmoteActions.Add(new EmoteAction
             {
@@ -518,12 +520,12 @@ namespace DygBot.Modules
                 Emote = new Emoji("🆔"), // id
                 Actions = new ActionTuple
                 {
-                    Added = new Func<ulong, Task<bool>>(async (ulong userId) =>
+                    Added = async userId =>
                     {
                         await _discord.GetUser(userId)?.SendMessageAsync(Context.User.Id.ToString());
 
                         return false;
-                    })
+                    }
                 }
             });
 

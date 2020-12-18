@@ -23,10 +23,10 @@ namespace DygBot.Services
     public class StartupService
     {
         private readonly IServiceProvider _provider;
-        private readonly DiscordSocketClient _discord;
+        public static DiscordSocketClient Discord { get; private set; }
         private readonly CommandService _commands;
         private readonly GitHubService _gitHub;
-        private readonly LoggingService _logging;
+        public static LoggingService Logging { get; private set; }
         private readonly IScheduler _scheduler;
         private readonly RedditClient _reddit;
 
@@ -40,10 +40,10 @@ namespace DygBot.Services
             RedditClient reddit)
         {
             _provider = provider;
-            _discord = discord;
+            Discord = discord;
             _commands = commands;
             _gitHub = gitHub;
-            _logging = logging;
+            Logging = logging;
             _scheduler = scheduler;
             _reddit = reddit;
         }
@@ -59,28 +59,28 @@ namespace DygBot.Services
             {
                 try
                 {
-                    await _discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
-                    await _discord.StartAsync();    // Connect to the websocket
+                    await Discord.LoginAsync(TokenType.Bot, discordToken); // Login to Discord
+                    await Discord.StartAsync();    // Connect to the websocket
                     break;
                 }
                 catch (HttpException he)
                 {
-                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Discord", he.Message));
+                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Discord", he.Message));
                     await Task.Delay(TimeSpan.FromSeconds(10));
-                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", "Trying to start again"));
+                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", "Trying to start again"));
                 }
                 catch (Exception e)
                 {
-                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
+                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
                 }
             }
 
             // Create datamap with required objects
             var defaultJobDataMap = new JobDataMap()
             {
-                {"Client", _discord },
+                {"Client", Discord },
                 {"GitHub", _gitHub },
-                {"Logging", _logging },
+                {"Logging", Logging },
                 {"Reddit", _reddit }
             };
 
@@ -170,7 +170,7 @@ namespace DygBot.Services
 
                 foreach (var kvp in git.Config.Servers)
                 {
-                    if (!client.Guilds.Any(x => x.Id == kvp.Key))    // If bot is not in server
+                    if (client.Guilds.All(x => x.Id != kvp.Key))    // If bot is not in server
                     {
                         continue;
                     }

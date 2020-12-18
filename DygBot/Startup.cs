@@ -23,8 +23,10 @@ using System.Threading.Tasks;
 
 namespace DygBot
 {
-    public class Startup
+    public static class Startup
     {
+        public static bool KeepRunning = true;
+        
         public static async Task RunAsync()
         {
             // Create a new instance of a service collection
@@ -38,12 +40,21 @@ namespace DygBot
             await provider.GetRequiredService<StartupService>().StartAsync();   // Start the startup service
             var scheduler = provider.GetRequiredService<IScheduler>();
             await scheduler.Start();
-            await Task.Delay(-1);   // Keep the program alive
-            Log.CloseAndFlush();
+
+            while (KeepRunning)
+            {
+                await Task.Delay(1000);
+            }
+
+            await StartupService.Logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopping"));
             await scheduler.Shutdown();
+            await StartupService.Discord.StopAsync();
+            await StartupService.Logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopped"));
+            
+            Log.CloseAndFlush();
         }
 
-        private async static Task ConfigureServices(IServiceCollection services)
+        private static async Task ConfigureServices(IServiceCollection services)
         {
             services
                 .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig   // Add Discord to the collection

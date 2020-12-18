@@ -401,7 +401,7 @@ namespace DygBot.Services
                     {
                         var source = _sources.Where(x => x.Gender.HasFlag(config.Value)).Random();
                         var list = reddit.Subreddit(source.SubredditName).Posts.GetTop("hour").Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
-                        if (list.Count() == 0)
+                        if (!list.Any())
                             list = reddit.Subreddit(source.SubredditName).Posts.GetNew().Where(x => source.PostPredicate(x) && ((LinkPost)x).URL.Contains("i.redd.it"));
                         var post = (LinkPost)list.Random();
                         var embed = new EmbedBuilder()

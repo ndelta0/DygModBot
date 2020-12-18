@@ -115,7 +115,7 @@ namespace DygBot.Addons.EmoteActioner
             {
                 if (emote.Equals(emoteAction.Emote))
                 {
-                    return await emoteAction.Actions.Added?.Invoke();
+                    return await emoteAction.Actions.Added?.Invoke(reaction.UserId);
                 }
             }
 
@@ -130,7 +130,7 @@ namespace DygBot.Addons.EmoteActioner
             {
                 if (emote.Equals(emoteAction.Emote))
                 {
-                    return await emoteAction.Actions.Removed?.Invoke();
+                    return await emoteAction.Actions.Removed?.Invoke(reaction.UserId);
                 }
             }
 

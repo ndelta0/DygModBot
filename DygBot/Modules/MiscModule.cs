@@ -83,7 +83,7 @@ namespace DygBot.Modules
                     await Context.Channel.SendMessageAsync("Musisz być na serwerze, żeby skorzystać z tej komendy");
                     return;
                 }
-                else if (_discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"])).Members.Count() > 0)
+                else if (_discord.GetGuild(683084560451633212).GetRole(ulong.Parse(_git.Config.Servers[683084560451633212].AdditionalConfig["oc.postRole"])).Members.Any())
                 {
                     await Context.Channel.SendMessageAsync("Aktualnie kanał oc-anonymous jest zajęty przez innego użytkownika. Spróbuj ponownie za chwilę.");
                     return;
@@ -324,7 +324,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("🔵"), // blue circle
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -334,7 +334,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -351,7 +351,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("🔴"), // red circle
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -361,7 +361,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -378,7 +378,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("🟣"), // purple circle
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -388,7 +388,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -404,7 +404,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("⭕"), // o (circle) (18+)
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -414,7 +414,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -431,7 +431,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("🚫"), // no entry sign (18-)
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         var inviteLink = await _discord.GetGuild(683084560451633212).DefaultChannel.CreateInviteAsync(null, null, false, false);
@@ -451,7 +451,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("⚪"), // white circle
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -461,7 +461,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -478,7 +478,7 @@ namespace DygBot.Modules
                 Emote = new Emoji("⛔"), // no entry
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -488,7 +488,7 @@ namespace DygBot.Modules
 
                         return false;
                     }),
-                    Removed = new Func<Task<bool>>(async () =>
+                    Removed = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
                         if (user != null)
@@ -502,14 +502,27 @@ namespace DygBot.Modules
             });
             actioner.EmoteActions.Add(new EmoteAction
             {
-                Emote = new Emoji("❌"), // \x (cross)
+                Emote = new Emoji("❌"), //\ x (cross)
                 Actions = new ActionTuple
                 {
-                    Added = new Func<Task<bool>>(async () =>
+                    Added = new Func<ulong, Task<bool>>(async (_) =>
                     {
                         await Context.User.SendMessageAsync("Twoja ankieta została odrzucona. Wyślij ją ponownie lub skontaktuj się z administracją.");
 
                         return true;
+                    })
+                }
+            });
+            actioner.EmoteActions.Add(new EmoteAction
+            {
+                Emote = new Emoji("🆔"), // id
+                Actions = new ActionTuple
+                {
+                    Added = new Func<ulong, Task<bool>>(async (ulong userId) =>
+                    {
+                        await _discord.GetUser(userId)?.SendMessageAsync(Context.User.Id.ToString());
+
+                        return false;
                     })
                 }
             });
@@ -519,7 +532,18 @@ namespace DygBot.Modules
             await ReplyAsync("Dziękujemy za wypełnienie aplikacji. Twoje role zostaną przyznane przez administrację najszybciej jak to możliwe.");
         }
 
-        private async Task DeleteAllChannelMessagesAsync(SocketTextChannel channel)
+        [Command("ping")]
+        public async Task PingAsync()
+        {
+            var pingFromUser = (int)Math.Round(Math.Abs((DateTimeOffset.Now - Context.Message.CreatedAt).TotalMilliseconds));
+            var pingToAPI = _discord.Latency;
+
+            await ReplyAsync($"```" +
+                             $"Ping to Discord's API: {pingToAPI}ms\n" +
+                             $"Ping to you:           {pingFromUser}ms```");
+        }
+
+        private static async Task DeleteAllChannelMessagesAsync(SocketTextChannel channel)
         {
             bool moreRemaining = true;
             ulong lastMsgId = 0;
@@ -528,7 +552,7 @@ namespace DygBot.Modules
                 var tmpMsgs = lastMsgId != 0 ? channel.GetMessagesAsync(lastMsgId, Direction.Before) : channel.GetMessagesAsync();
 
                 var msgs = await tmpMsgs.FlattenAsync();
-                moreRemaining = msgs.Count() > 0;
+                moreRemaining = msgs.Any();
                 if (!moreRemaining)
                     continue;
                 msgs.ToList().ForEach(async x =>
@@ -537,66 +561,6 @@ namespace DygBot.Modules
                 });
                 lastMsgId = msgs.Last().Id;
             } while (moreRemaining);
-        }
-
-        private bool ExtendedBoolTryParse(string value, out bool result)
-        {
-            result = false;
-
-            if (value == null) return false;
-            if (value.Length == 0) return false;
-
-            value = value.Trim();
-
-            if (value.Length == 1)
-            {
-                if (int.TryParse(value, out int intResult))
-                {
-                    if (intResult == 0)
-                    {
-                        result = false;
-                        return true;
-                    }
-                    else if (intResult == 1)
-                    {
-                        result = true;
-                        return true;
-                    }
-                }
-                else
-                {
-                    if (value.ToLower()[0] == 'n')
-                    {
-                        result = false;
-                        return true;
-                    }
-                    else if (value.ToLower()[0] == 'y')
-                    {
-                        result = true;
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                if (value.ToLower() == "nie" || value.ToLower() == "false")
-                {
-                    result = false;
-                    return true;
-                }
-                else if (value.ToLower() == "tak" || value.ToLower() == "true")
-                {
-                    result = true;
-                    return true;
-                }
-            }
-
-            if (bool.TryParse(value, out result))
-            {
-                return true;
-            }
-
-            return false;
         }
     }
 }

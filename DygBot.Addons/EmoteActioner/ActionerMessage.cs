@@ -34,7 +34,7 @@ namespace DygBot.Addons.EmoteActioner
 
     public struct ActionTuple
     {
-        public Func<Task<bool>> Added { get; set; }
-        public Func<Task<bool>> Removed { get; set; }
+        public Func<ulong, Task<bool>> Added { get; set; }
+        public Func<ulong, Task<bool>> Removed { get; set; }
     }
 }

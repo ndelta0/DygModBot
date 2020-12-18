@@ -27,11 +27,11 @@ namespace DygBot.Services
             HttpClient client)
         {
             _client = client;
-            var environment = Environment.GetEnvironmentVariable("ENVIRONMENT");
-            if (environment == "DEVELOPMENT")
-                _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.dev.json");
-            else
-                _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.json");
+            //var environment = Environment.GetEnvironmentVariable("ENVIRONMENT");
+            //if (environment == "DEVELOPMENT")
+            //    _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.dev.json");
+            //else
+            _configUri = new Uri("https://api.github.com/repos/D3LT4PL/bot_config_repo/contents/dygmodbot_config.json");
 
             _settings = new JsonSerializerSettings
             {

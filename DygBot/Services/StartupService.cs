@@ -118,7 +118,7 @@ namespace DygBot.Services
                 .WithIdentity("lockdownBeginTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(5))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 2 1/1 * ? *")
+                .WithCronSchedule("0 0 3 1/1 * ? *")
                 .StartNow()
                 .Build();
 
@@ -130,7 +130,7 @@ namespace DygBot.Services
                 .WithIdentity("lockdownEndTrigger", "discordGroup")
                 //.StartAt(DateTimeOffset.UtcNow.AddSeconds(15))
                 //.WithSimpleSchedule(x => x.WithIntervalInMinutes(5).WithRepeatCount(0))
-                .WithCronSchedule("0 0 6 1/1 * ? *")
+                .WithCronSchedule("0 0 7 1/1 * ? *")
                 .StartNow()
                 .Build();
 

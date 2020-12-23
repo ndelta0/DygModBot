@@ -61,7 +61,8 @@ namespace DygBot
                 {
                     LogLevel = LogSeverity.Debug,    // Set the log level
                     MessageCacheSize = 1000, // Cache 1000 messages per channel
-                    ExclusiveBulkDelete = true  // Fire only bulk delete or delete event (by default both get fired on bulk delete)
+                    ExclusiveBulkDelete = true,  // Fire only bulk delete or delete event (by default both get fired on bulk delete)
+                    AlwaysDownloadUsers = true
                 }))
                 .AddSingleton(new CommandService(new CommandServiceConfig   // Add the command service to the collection
                 {

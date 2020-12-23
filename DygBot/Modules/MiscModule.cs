@@ -35,14 +35,12 @@ namespace DygBot.Modules
 
         [Command("roles")]
         [Summary("Pokazuje role użytkownika")]
+        [Scope(Scope.Guild)]
         public async Task RolesAsync([Summary("Użytkownik")] SocketGuildUser user = null)
         {
             if (user == null)
             {
-                if (Context.User is SocketGuildUser)
-                {
-                    user = Context.User as SocketGuildUser;
-                }
+                user = Context.Guild.GetUser(Context.User.Id);
             }
             else
             {
@@ -305,9 +303,7 @@ namespace DygBot.Modules
 
             var channel = _discord.GetGuild(683084560451633212).GetTextChannel(779049131028643860);
 
-            var actioner = new ActionerMessage
-            {
-                Embed = new EmbedBuilder()
+            var guildEmbed = new EmbedBuilder()
                     .WithAuthor($"{Context.User.Username}#{Context.User.Discriminator}")
                     .WithTitle("Wypełniona ankieta")
                     .WithDescription("================")
@@ -316,222 +312,25 @@ namespace DygBot.Modules
                     .WithThumbnailUrl(Context.User.GetAvatarUrlSafe())
                     .AddField("Użytkownik", $"{Context.User.Mention} ({Context.User.Id})")
                     .AddField("Płeć", genderStr)
-                    .AddField("Wiek", ageStr, true)
-                    .AddField("Wiadomości", dmOpenStr, true)
-                    .Build(),
-                Content = Context.User.Mention
-            };
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("🔵"), // blue circle
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683282889538142218));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683282889538142218));
-                        }
-
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("🔴"), // red circle
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683283001026936838));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683283001026936838));
-                        }
-
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("🟣"), // purple circle
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683300251876196385));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683300251876196385));
-                        }
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("⭕"), // o (circle) (18+)
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683305736532394027));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(683305736532394027));
-                        }
-
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("🚫"), // no entry sign (18-)
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        var inviteLink = await _discord.GetGuild(683084560451633212).DefaultChannel.CreateInviteAsync(null, null, false, false);
-                        await Context.User.SendMessageAsync(embed: new EmbedBuilder()
-                            .WithTitle("**Szanowny użytkowniku!**")
-                            .WithDescription($"Dygawka jest serwerem z zawartością nieodpowiednią dla nieletnich. Deklarując się jako osoba poniżej 18ego roku życia, Twoje konto zostało usunięte z listy dygaczy. Nie martw się, __nie zostało zbanowane__. Jeśli wybór roli *Underage* był efektem pomyłki, możesz nadal dołączyć do grona naszych użytkowników potwierdzając swoją pełnoletniość na mocy punktu nr 15 w naszym regulaminie. Jeśli zaś jesteś osobą nieletnią, zapraszamy na nasz serwer w przyszłości!\n\nMożesz dołączyć na serwer ponownie **[klikając w ten link]({inviteLink.Url})**")
-                            .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
-                            .Build());
-                        await user.KickAsync("Niepełnoletni");
-
-                        return true;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("⚪"), // white circle
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(719661984551010325));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(719661984551010325));
-                        }
-
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("⛔"), // no entry
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.AddRoleAsync(_discord.GetGuild(683084560451633212).GetRole(719662311505264681));
-                        }
-
-                        return false;
-                    }),
-                    Removed = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        var user = await _discord.GetGuild(683084560451633212).GetUserSafeAsync(Context.User.Id);
-                        if (user != null)
-                        {
-                            await user.RemoveRoleAsync(_discord.GetGuild(683084560451633212).GetRole(719662311505264681));
-                        }
-
-                        return false;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("❌"), //\ x (cross)
-                Actions = new ActionTuple
-                {
-                    Added = new Func<ulong, Task<bool>>(async (_) =>
-                    {
-                        await Context.User.SendMessageAsync("Twoja ankieta została odrzucona. Wyślij ją ponownie lub skontaktuj się z administracją.");
-
-                        return true;
-                    })
-                }
-            });
-            actioner.EmoteActions.Add(new EmoteAction
-            {
-                Emote = new Emoji("🆔"), // id
-                Actions = new ActionTuple
-                {
-                    Added = async userId =>
-                    {
-                        await _discord.GetUser(userId)?.SendMessageAsync(Context.User.Id.ToString());
-
-                        return false;
-                    }
-                }
-            });
-
-            await ExtendedInteractive.SendActionerMessageAsync(channel, actioner);
+                    .AddField("Wiek", ageStr)
+                    .AddField("Wiadomości", dmOpenStr)
+                    .Build();
 
             await ReplyAsync("Dziękujemy za wypełnienie aplikacji. Twoje role zostaną przyznane przez administrację najszybciej jak to możliwe.");
+
+            await channel.SendMessageAsync(Context.User.Mention, embed: guildEmbed, emotes: new IEmote[]
+            {
+                new Emoji("🔵"),     // blue
+                new Emoji("🔴"),     // red
+                new Emoji("🟣"),       // purple
+                new Emoji("⭕"),      // circle
+                new Emoji("🚫"),     // no entry sign
+                new Emoji("⚪"),     // white
+                new Emoji("⛔"),     // no entry
+                new Emoji("✅"),     // tick
+                new Emoji("❌"),     // cross
+                new Emoji("🆔")      // id
+            });
         }
 
         [Command("ping")]

@@ -29,7 +29,7 @@ namespace DygBot.Services
         public static LoggingService Logging { get; private set; }
         private readonly IScheduler _scheduler;
         private readonly RedditClient _reddit;
-
+        
         public StartupService(
             IServiceProvider provider,
             DiscordSocketClient discord,

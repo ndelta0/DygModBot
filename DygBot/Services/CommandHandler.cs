@@ -14,6 +14,7 @@ using static DygBot.Modules.ModerationModule.ReactionRoleClass;
 using System.Net.Http;
 using System.IO;
 using System.Text.RegularExpressions;
+using Discord.Rest;
 
 namespace DygBot.Services
 {
@@ -26,6 +27,7 @@ namespace DygBot.Services
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
         private readonly HttpClient _client;
+        public static bool FinishedInit;
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -49,10 +51,11 @@ namespace DygBot.Services
             _discord.UserVoiceStateUpdated += Discord_UserVoiceStateUpdated;
             _discord.ReactionAdded += Discord_ReactionAdded;
             _discord.ReactionRemoved += Discord_ReactionRemoved;
+            _discord.UserJoined += Discord_UserJoined;
             _discord.Ready += async () =>
             {
                 await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
-
+                
                 _ = Task.Run(async () =>
                 {
                     var msg = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/D3LT4PL/DygModBot/commits?per_page=1");
@@ -64,6 +67,7 @@ namespace DygBot.Services
                     IActivity activity = new Game($"Build nr {amount}");
                     await _discord.SetActivityAsync(activity);
                     await _discord.SetStatusAsync(UserStatus.DoNotDisturb);
+                    FinishedInit = true;
                     await Task.Delay(TimeSpan.FromMinutes(1));
                     await _discord.SetActivityAsync(new Game("db!new | db!oc | DM me"));
                     await _discord.SetStatusAsync(UserStatus.Online);
@@ -77,11 +81,14 @@ namespace DygBot.Services
             _commands.AddTypeReader<IMessage>(new IMessageTypeReader());
         }
 
-
+        private async Task Discord_UserJoined(SocketGuildUser user)
+        {
+            await user.SendMessageAsync("Witamy na Dygawce! Aby otrzymać pełen dostęp, wyślij pod tą wiadomością komendę `db!new` i odpowiedz na pytania. Twoja ankieta trafi do administracji, która przydzieli Twoje role tak szybko, jak to tylko możliwe. Pamiętaj, aby podawać prawdziwe informacje, ponieważ administracja w każdej chwili może poprosić Cię o weryfikację!");
+        }
 
         private async Task Discord_ReactionAdded(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction sockReaction)
         {
-            var user = sockReaction.User.GetValueOrDefault() ?? _discord.GetGuild((socketMessageChannel as SocketTextChannel).Guild.Id).GetUser(userCacheable.Id);
+            var user = sockReaction.User.IsSpecified ? sockReaction.User.Value : await _discord.GetGuild((socketMessageChannel as SocketTextChannel).Guild.Id).GetUserSafeAsync(userCacheable.Id);
             if (user == null)
                 return;
             if (user.Id == _discord.CurrentUser.Id || user.IsBot)
@@ -92,6 +99,188 @@ namespace DygBot.Services
             var channel = socketMessageChannel as SocketTextChannel;
             var guild = channel.Guild;
             var message = await userCacheable.GetOrDownloadAsync();
+
+            // Is Applications channel reaction
+            if (channel.Id == 779049131028643860 && guild.Id == 683084560451633212)
+            {
+                var allMessageReactions = message.Reactions.Where(x => x.Value.ReactionCount > 1).ToList();
+
+                var genderEmotes = new Dictionary<IEmote, ulong>
+                {
+                    { new Emoji("🔵"), 683282889538142218 },
+                    { new Emoji("🔴"), 683283001026936838 },
+                    { new Emoji("🟣"), 683300251876196385 }
+                };
+                var ageEmotes = new Dictionary<IEmote, ulong>
+                {
+                    { new Emoji("⭕"), 683305736532394027 },
+                    { new Emoji("🚫"), default }
+                };
+                var dmEmotes = new Dictionary<IEmote, ulong>
+                {
+                    { new Emoji("⚪"), 719661984551010325 },
+                    { new Emoji("⛔"), 719662311505264681 }
+                };
+                var acceptEmote = new Emoji("✅");
+                var rejectEmote = new Emoji("❌");
+                var idEmote = new Emoji("🆔");
+
+                // Is gender reaction
+                if (genderEmotes.ContainsKey(sockReaction.Emote))
+                {
+                    if (allMessageReactions.Sum(x => genderEmotes.ContainsKey(x.Key) ? 1d : 0d) > 1d)
+                    {
+                        foreach (var reaction in allMessageReactions)
+                        {
+                            if (genderEmotes.ContainsKey(reaction.Key) && !sockReaction.Emote.IsEqual(reaction.Key))
+                            {
+                                await message.GetReactionUsersAsync(reaction.Key, reaction.Value.ReactionCount).Flatten().ForEachAwaitAsync(x =>
+                                {
+                                    if (x.Id != _discord.CurrentUser.Id || !x.IsBot)
+                                    {
+                                        return message.RemoveReactionAsync(reaction.Key, x);
+                                    }
+                                    else
+                                        return Task.CompletedTask;
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Is (under)age reaction
+                if (sockReaction.Emote.IsEqual(new Emoji("🚫")))
+                {
+                    var userId = message.MentionedUserIds.FirstOrDefault();
+                    if (userId != default)
+                    {
+                        var kickUser = await guild.GetUserSafeAsync(userId);
+                        if (kickUser != null)
+                        {
+                            var inviteLink = await guild.DefaultChannel.CreateInviteAsync(null, null, false, false);
+                            await kickUser.SendMessageAsync(embed: new EmbedBuilder()
+                                .WithTitle("**Szanowny użytkowniku!**")
+                                .WithDescription($"Dygawka jest serwerem z zawartością nieodpowiednią dla nieletnich. Deklarując się jako osoba poniżej 18ego roku życia, Twoje konto zostało usunięte z listy dygaczy. Nie martw się, __nie zostało zbanowane__. Jeśli wybór roli *Underage* był efektem pomyłki, możesz nadal dołączyć do grona naszych użytkowników potwierdzając swoją pełnoletniość na mocy punktu nr 15 w naszym regulaminie. Jeśli zaś jesteś osobą nieletnią, zapraszamy na nasz serwer w przyszłości!\n\nMożesz dołączyć na serwer ponownie **[klikając w ten link]({inviteLink.Url})**")
+                                .WithColor(_git.Config.Servers[683084560451633212].ServerColor)
+                                .Build());
+                            await kickUser.KickAsync("Niepełnoletni");
+
+                            await message.RemoveAllReactionsAsync();
+                            await message.AddReactionAsync(new Emoji("🚫"));
+
+                            var embed = message.Embeds.First().ToEmbedBuilder().WithTitle("Ankieta odrzucona\nNieletni").WithColor(0xF7CD64).Build();
+                            await message.ModifyAsync(x => x.Embed = embed);
+                        }
+                    }
+                }
+
+                // Is dm reaction
+                if (dmEmotes.ContainsKey(sockReaction.Emote))
+                {
+                    foreach (var reaction in allMessageReactions)
+                    {
+                        if (dmEmotes.ContainsKey(reaction.Key) && !sockReaction.Emote.IsEqual(reaction.Key))
+                        {
+                            await message.GetReactionUsersAsync(reaction.Key, reaction.Value.ReactionCount).Flatten().ForEachAwaitAsync(x =>
+                            {
+                                if (x.Id != _discord.CurrentUser.Id || !x.IsBot)
+                                {
+                                    return message.RemoveReactionAsync(reaction.Key, x);
+                                }
+                                else
+                                    return Task.CompletedTask;
+                            });
+                        }
+                    }
+                }
+
+                // Is accept reaction
+                if (sockReaction.Emote.IsEqual(acceptEmote))
+                {
+                    var roleIds = new ulong[3];
+
+                    foreach (var reaction in allMessageReactions)
+                    {
+                        if (reaction.Key == acceptEmote || reaction.Key == rejectEmote || reaction.Key == idEmote)
+                            continue;
+                        if (genderEmotes.TryGetValue(reaction.Key, out ulong tmpId))
+                            roleIds[0] = tmpId;
+                        if (ageEmotes.TryGetValue(reaction.Key, out tmpId))
+                            roleIds[1] = tmpId;
+                        if (dmEmotes.TryGetValue(reaction.Key, out tmpId))
+                            roleIds[2] = tmpId;
+                    }
+
+                    if (roleIds.All(x => x != default))
+                    {
+                        var userId = message.MentionedUserIds.FirstOrDefault();
+                        if (userId != default)
+                        {
+                            var targetUser = await guild.GetUserSafeAsync(userId);
+                            if (targetUser != null)
+                            {
+                                foreach (var roleId in roleIds)
+                                {
+                                    var role = guild.GetRole(roleId);
+                                    await targetUser.AddRoleAsync(role);
+                                }
+
+                                var emotes = allMessageReactions.Where(x => !x.Key.IsEqual(acceptEmote)).Select(x => x.Key);
+
+                                await message.RemoveAllReactionsAsync();
+                                await message.AddReactionsAsync(emotes.ToArray());
+                                
+
+                                await targetUser.SendMessageAsync("Twoje role na serwerze Dygawka zostały właśnie przyznane. Miłego postowania!");
+
+                                var embed = message.Embeds.First().ToEmbedBuilder().WithTitle("Ankieta zatwierdzona").WithColor(0x84AF60).Build();
+                                await message.ModifyAsync(x => x.Embed = embed);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        await message.RemoveReactionAsync(sockReaction.Emote, user);
+                        var msg = await channel.SendMessageAsync("Nie wszystkie role zostały wybrane");
+                        await Task.Run(async () =>
+                        {
+                            await Task.Delay(5000);
+                            await msg.DeleteAsync();
+                        });
+                    }
+                }
+
+                // Is reject reaction
+                if (sockReaction.Emote.IsEqual(rejectEmote))
+                {
+                    var userId = message.MentionedUserIds.FirstOrDefault();
+                    if (userId != default)
+                    {
+                        var rejectUser = await guild.GetUserSafeAsync(userId);
+                        if (rejectUser != null)
+                        {
+                            await rejectUser.SendMessageAsync("Twoja ankieta została odrzucona. Wyślij ją ponownie lub skontaktuj się z administracją.");
+
+                            await message.RemoveAllReactionsAsync();
+                            await message.AddReactionAsync(rejectEmote);
+
+                            var embed = message.Embeds.First().ToEmbedBuilder().WithTitle("Ankieta odrzucona").WithColor(0x202225).Build();
+                            await message.ModifyAsync(x => x.Embed = embed);
+                        }
+                    }
+                }
+
+                // Is id reaction
+                if (sockReaction.Emote.IsEqual(idEmote))
+                {
+                    var userId = message.MentionedUserIds.FirstOrDefault();
+                    if (userId != default)
+                    {
+                        await user.SendMessageAsync(userId.ToString());
+                        await message.RemoveReactionAsync(sockReaction.Emote, user);
+                    }
+                }
+            }
 
             // Check if underage was selected
             if (sockReaction.Emote.ToString() == "🚫" && (channel.Id == 737304061862477834 || channel.Id == 683283482109411328) && guild.Id == 683084560451633212)
@@ -113,7 +302,6 @@ namespace DygBot.Services
                 return;
             }
 
-
             // Check reaction limits
             if (_git.Config.Servers[guild.Id].AllowedReactions.TryGetValue(sockReaction.Emote.ToString(), out HashSet<ulong> channels))
             {
@@ -122,7 +310,6 @@ namespace DygBot.Services
                     await message.RemoveReactionAsync(sockReaction.Emote, user);
                 }
             }
-
 
             // Reaction roles
             if (user is SocketGuildUser member)
@@ -205,7 +392,7 @@ namespace DygBot.Services
 
         private async Task Discord_ReactionRemoved(Cacheable<IUserMessage, ulong> userCacheable, ISocketMessageChannel socketMessageChannel, SocketReaction sockReaction)
         {
-            var user = sockReaction.User.GetValueOrDefault() ?? _discord.GetGuild((socketMessageChannel as SocketTextChannel).Guild.Id).GetUser(userCacheable.Id);
+            var user = sockReaction.User.IsSpecified ? sockReaction.User.Value : await _discord.GetGuild((socketMessageChannel as SocketTextChannel).Guild.Id).GetUserSafeAsync(userCacheable.Id);
             if (user == null)
                 return;
             if (user.Id == _discord.CurrentUser.Id || user.IsBot)

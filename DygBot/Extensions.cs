@@ -5,9 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Discord;
+using Discord.Rest;
 using Discord.WebSocket;
 
 using DygBot.Models;
+using DygBot.Services;
 
 namespace DygBot
 {
@@ -46,6 +48,7 @@ namespace DygBot
             var user = guild.GetUser(userId);
             if (user == null)
             {
+                while (CommandHandler.FinishedInit) { await Task.Delay(100); }
                 await guild.DownloadUsersAsync();
                 user = guild.GetUser(userId);
                 if (user == null)
@@ -58,5 +61,20 @@ namespace DygBot
 
         public static string GetAvatarUrlSafe(this IUser user, ImageFormat format = ImageFormat.Auto, ushort size = 128)
             => user.GetAvatarUrl(format, size) ?? user.GetDefaultAvatarUrl();
+
+        public static async Task<IUserMessage> SendMessageAsync(this IMessageChannel channel, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, IEmote[] emotes = null, RequestOptions emotesOptions = null)
+        {
+            var message = await channel.SendMessageAsync(text, isTTS, embed, options, allowedMentions, messageReference);
+            if (emotes != null)
+            {
+                await message.AddReactionsAsync(emotes, emotesOptions);
+            }
+            return message;
+        }
+
+        public static bool IsEqual(this IEmote emote, IEmote other)
+        {
+            return emote.Name == other.Name;
+        }
     }
 }

@@ -27,3 +27,9 @@ jobs:
 
     - name: Publish
       run: dotnet publish
+
+    - name: Upload DygBot Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: DygBot
+        path: /home/runner/work/DygModBot/DygModBot/DygBot/bin/Debug/net5.0/publish/

@@ -1,19 +1,21 @@
-﻿using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
-
-using DygBot.Services;
-using Newtonsoft.Json;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+
+using Discord;
+using Discord.Addons.Interactive;
+using Discord.Commands;
+
+using DygBot.Services;
+
+using Newtonsoft.Json;
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace DygBot.Modules
 {
@@ -21,12 +23,10 @@ namespace DygBot.Modules
     public class FunModule : InteractiveBase<SocketCommandContext>
     {
         private readonly HttpClient _http;
-        private readonly LoggingService _logging;
 
-        public FunModule(HttpClient http, LoggingService logging)
+        public FunModule(HttpClient http)
         {
             _http = http;
-            _logging = logging;
         }
 
         [Command("versus")]
@@ -92,7 +92,7 @@ namespace DygBot.Modules
                 catch (Exception ex)
                 {
                     await ReplyAndDeleteAsync("Miałem problem z tymi zdjęciami, spróbuj inne", timeout: TimeSpan.FromSeconds(3));
-                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", ex.Message, ex));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", ex.Message, ex));
                     await Context.Message.DeleteAsync();
                 }
             }
@@ -199,7 +199,7 @@ namespace DygBot.Modules
                 catch (Exception ex)
                 {
                     await ReplyAndDeleteAsync("Miałem problem z tymi zdjęciami, spróbuj inne", timeout: TimeSpan.FromSeconds(3));
-                    await _logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", ex.Message, ex));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", ex.Message, ex));
                     await msg1.DeleteAsync();
                 }
                 var culture = System.Globalization.CultureInfo.CurrentCulture;
@@ -221,7 +221,7 @@ namespace DygBot.Modules
             };
             await Context.Message.AddReactionsAsync(reactions);
         }
-        
+
         [Command("8ball", true)]
         [Summary("Odpowiada na pytanie zamknięte")]
         public async Task AnswerAsync()
@@ -262,7 +262,7 @@ namespace DygBot.Modules
             await Context.Message.AddReactionsAsync(emotes);
         }
 
-        private bool IsValidImage(Uri imagePath)
+        private static bool IsValidImage(Uri imagePath)
         {
             var validExtensions = new string[] { "jpeg", "jpg", "png", "webp", "bmp", "tiff" };
             return validExtensions.Contains(imagePath.Segments.Last().Split('.').Last());

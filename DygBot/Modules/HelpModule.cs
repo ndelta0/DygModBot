@@ -1,8 +1,10 @@
-﻿using Discord;
-using Discord.Commands;
-using DygBot.Services;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
+
+using Discord;
+using Discord.Commands;
+
+using DygBot.Services;
 
 namespace DygBot.Modules
 {
@@ -37,7 +39,7 @@ namespace DygBot.Modules
                 string description = module.IsSubmodule ? "\t" : string.Empty;
                 foreach (var cmd in module.Commands)
                 {
-                    description += $"{prefix}{cmd.Aliases.First()}";
+                    description += $"{prefix}{cmd.Aliases[0]}";
                     foreach (var param in cmd.Parameters)
                     {
                         string paramDesc = "";

@@ -1,14 +1,16 @@
-﻿using Discord;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+using Discord;
 
 using DygBot.Models;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
+
 using static DygBot.Modules.ModerationModule.ReactionRoleClass;
 
 namespace DygBot.Services

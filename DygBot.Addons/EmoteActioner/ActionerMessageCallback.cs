@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
-
-using DygBot.Addons;
 
 namespace DygBot.Addons.EmoteActioner
 {
@@ -97,7 +92,7 @@ namespace DygBot.Addons.EmoteActioner
                 }
             });
 
-            if (Timeout.HasValue && Timeout.Value != null)
+            if (Timeout.HasValue)
             {
                 _ = Task.Delay(Timeout.Value).ContinueWith(_ =>
                 {

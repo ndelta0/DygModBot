@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Discord;
@@ -8,7 +6,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 
-using DygBot.Addons;
 using DygBot.Addons.EmoteActioner;
 
 namespace DygBot.Addons

@@ -1,13 +1,22 @@
-﻿using Discord;
+﻿using System;
+using System.Collections.Specialized;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 
 using DygBot.Addons;
 using DygBot.Services;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
+
 using Quartz;
 using Quartz.Impl;
 
@@ -15,18 +24,14 @@ using Reddit;
 
 using Serilog;
 
-using System;
-using System.Collections.Specialized;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-
 namespace DygBot
 {
     public static class Startup
     {
+#pragma warning disable CA2211 // Non-constant fields should not be visible
         public static bool KeepRunning = true;
-        
+#pragma warning restore CA2211 // Non-constant fields should not be visible
+
         public static async Task RunAsync()
         {
             // Create a new instance of a service collection
@@ -46,11 +51,11 @@ namespace DygBot
                 await Task.Delay(1000);
             }
 
-            await StartupService.Logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopping"));
+            await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopping"));
             await scheduler.Shutdown();
             await StartupService.Discord.StopAsync();
-            await StartupService.Logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopped"));
-            
+            await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Program", "Stopped"));
+
             Log.CloseAndFlush();
         }
 

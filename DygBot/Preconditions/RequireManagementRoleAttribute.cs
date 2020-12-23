@@ -1,10 +1,13 @@
-﻿using Discord.Commands;
-using Discord.WebSocket;
-using DygBot.Services;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+
+using Discord.Commands;
+using Discord.WebSocket;
+
+using DygBot.Services;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DygBot.Preconditions
 {

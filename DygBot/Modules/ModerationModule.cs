@@ -1,24 +1,19 @@
-﻿using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
-using DygBot.Models;
-using DygBot.Preconditions;
-using DygBot.Services;
-using DygBot.TypeReaders;
-
-using Reddit;
-using Reddit.Controllers;
-
-using SixLabors.ImageSharp.ColorSpaces;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using Discord;
+using Discord.Addons.Interactive;
+using Discord.Commands;
+using Discord.WebSocket;
+
+using DygBot.Models;
+using DygBot.Preconditions;
+using DygBot.Services;
+
 using static DygBot.Services.GitHubService.ConfigClass.ServerConfigClass;
 using static DygBot.Services.GitHubService.ConfigClass.ServerConfigClass.CountChannelClass;
 
@@ -373,7 +368,7 @@ namespace DygBot.Modules
                 OneOfMany
             }
 
-            private void AddRoleResult<T>(Dictionary<ulong, TypeReaderValue> results, T role, float score) where T : IRole
+            private static void AddRoleResult<T>(Dictionary<ulong, TypeReaderValue> results, T role, float score) where T : IRole
             {
                 if (role != null && !results.ContainsKey(role.Id))
                     results.Add(role.Id, new TypeReaderValue(role, score));

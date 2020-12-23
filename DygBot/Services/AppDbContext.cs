@@ -1,5 +1,4 @@
-﻿using DygBot.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace DygBot.Services
 {

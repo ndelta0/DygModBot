@@ -1,9 +1,12 @@
-﻿using DygBot.Services;
+﻿using System;
+using System.Text.RegularExpressions;
+
+using DygBot.Services;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-using System;
-using System.Text.RegularExpressions;
 
 namespace DygBot.Models
 {

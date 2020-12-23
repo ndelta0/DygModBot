@@ -1,9 +1,7 @@
-﻿using Discord.Commands;
-using Discord.WebSocket;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
+
+using Discord.Commands;
 
 namespace DygBot.TypeReaders
 {

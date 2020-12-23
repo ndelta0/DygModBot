@@ -7,7 +7,7 @@ namespace DygBot
     {
         public static Task Main()
         {
-            Console.CancelKeyPress += delegate(object _, ConsoleCancelEventArgs args)
+            Console.CancelKeyPress += delegate (object _, ConsoleCancelEventArgs args)
             {
                 args.Cancel = true;
                 Startup.KeepRunning = false;

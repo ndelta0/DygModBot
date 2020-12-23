@@ -1,22 +1,16 @@
-﻿using Discord;
-using Discord.Addons.Interactive;
+﻿using System;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 
 using DygBot.Addons;
-using DygBot.Addons.EmoteActioner;
-using DygBot.Models;
 using DygBot.Preconditions;
 using DygBot.Services;
-
-using SixLabors.ImageSharp.ColorSpaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DygBot.Modules
 {
@@ -70,7 +64,7 @@ namespace DygBot.Modules
         {
             if (Context.IsPrivate)
             {
-                
+
                 if (_git.Config.Servers[683084560451633212].OcChannels.Count == 0)
                 {
                     await ReplyAndDeleteAsync("Anonimowe wysyłanie wiadomości nie jest włączone na tym serwerze", timeout: TimeSpan.FromSeconds(5));

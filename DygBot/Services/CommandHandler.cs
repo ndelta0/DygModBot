@@ -1,20 +1,19 @@
-﻿using Discord;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
-using DygBot.Models;
+
 using DygBot.TypeReaders;
-using Quartz;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using static DygBot.Services.GitHubService;
+
 using static DygBot.Modules.ModerationModule.ReactionRoleClass;
-using System.Net.Http;
-using System.IO;
-using System.Text.RegularExpressions;
-using Discord.Rest;
+using static DygBot.Services.GitHubService;
 
 namespace DygBot.Services
 {
@@ -27,7 +26,9 @@ namespace DygBot.Services
         private readonly LoggingService _logging;
         private readonly InteractiveService _interactive;
         private readonly HttpClient _client;
+#pragma warning disable CA2211 // Non-constant fields should not be visible
         public static bool FinishedInit;
+#pragma warning restore CA2211 // Non-constant fields should not be visible
 
         public CommandHandler(
             DiscordSocketClient discord,
@@ -54,8 +55,8 @@ namespace DygBot.Services
             _discord.UserJoined += Discord_UserJoined;
             _discord.Ready += async () =>
             {
-                await _logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
-                
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Discord", $"Logged in as: {_discord.CurrentUser.Username}"));
+
                 _ = Task.Run(async () =>
                 {
                     var msg = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/repos/D3LT4PL/DygModBot/commits?per_page=1");
@@ -229,7 +230,7 @@ namespace DygBot.Services
 
                                 await message.RemoveAllReactionsAsync();
                                 await message.AddReactionsAsync(emotes.ToArray());
-                                
+
 
                                 await targetUser.SendMessageAsync("Twoje role na serwerze Dygawka zostały właśnie przyznane. Miłego postowania!");
 
@@ -664,7 +665,7 @@ namespace DygBot.Services
                             }
                         }
                     }
-                } 
+                }
             }
             else
             {

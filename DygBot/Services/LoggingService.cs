@@ -1,13 +1,11 @@
-﻿using Discord;
+﻿using System.IO;
+using System.Threading.Tasks;
+
+using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using System;
-using System.Threading.Tasks;
+
 using Serilog;
-using Serilog.Sinks.File;
-using Serilog.Sinks.SystemConsole;
-using Serilog.Sinks.Async;
-using System.IO;
 
 namespace DygBot.Services
 {
@@ -32,7 +30,7 @@ namespace DygBot.Services
             _commands.Log += OnLogAsync;
         }
 
-        public Task OnLogAsync(LogMessage msg)
+        public static Task OnLogAsync(LogMessage msg)
         {
             var source = msg.Source;
             var message = msg.Message ?? "";

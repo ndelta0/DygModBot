@@ -1,22 +1,20 @@
-﻿using Discord;
-using Discord.API;
-using Discord.Commands;
-using Discord.Net;
-using Discord.WebSocket;
-using DygBot.Models;
-using Microsoft.Extensions.DependencyInjection;
-using Quartz;
-
-using Reddit;
-using Reddit.Controllers;
-
-using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+using Discord;
+using Discord.Commands;
+using Discord.Net;
+using Discord.WebSocket;
+
+using DygBot.Models;
+
+using Quartz;
+
+using Reddit;
+using Reddit.Controllers;
 
 namespace DygBot.Services
 {
@@ -29,7 +27,7 @@ namespace DygBot.Services
         public static LoggingService Logging { get; private set; }
         private readonly IScheduler _scheduler;
         private readonly RedditClient _reddit;
-        
+
         public StartupService(
             IServiceProvider provider,
             DiscordSocketClient discord,
@@ -65,13 +63,13 @@ namespace DygBot.Services
                 }
                 catch (HttpException he)
                 {
-                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Discord", he.Message));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Error, "Discord", he.Message));
                     await Task.Delay(TimeSpan.FromSeconds(10));
-                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", "Trying to start again"));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Warning, "Discord", "Trying to start again"));
                 }
                 catch (Exception e)
                 {
-                    await Logging.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Critical, "Discord", e.Message, e));   // Log exception
                 }
             }
 
@@ -166,7 +164,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating counters"));  // Log
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Updating counters"));  // Log
 
                 foreach (var kvp in git.Config.Servers)
                 {
@@ -206,7 +204,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Clearing VC chat"));
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Clearing VC chat"));
 
                 var channelIds = new ulong[] { 760505659912618015, 763873712050405406, 721113555813924885, 721114067355435058, 767428659270778940 };    // Channels to be cleared
                 //var channelIds = new ulong[] { 722187075176235061 };
@@ -233,7 +231,7 @@ namespace DygBot.Services
                                 hasMessages = false;
                         }
                     } while (hasMessages);  // Delete until all messages are deleted or are older than 14 days
-                    await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", $"Cleared {messagesCleared} messages in {channel.Name}"));  // Log number of deleted messages
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", $"Cleared {messagesCleared} messages in {channel.Name}"));  // Log number of deleted messages
                 }
             }
         }
@@ -246,7 +244,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Beggining lockdown"));
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Beggining lockdown"));
 
                 try
                 {
@@ -258,7 +256,7 @@ namespace DygBot.Services
                 }
                 catch (Exception ex)
                 {
-                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown begin error", ex));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown begin error", ex));
                 }
             }
         }
@@ -271,7 +269,7 @@ namespace DygBot.Services
                 var git = (GitHubService)dataMap["GitHub"];
                 var logging = (LoggingService)dataMap["Logging"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Ending lockdown"));
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Ending lockdown"));
 
                 try
                 {
@@ -283,7 +281,7 @@ namespace DygBot.Services
                 }
                 catch (Exception ex)
                 {
-                    await logging.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown end error", ex));
+                    await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Error, "Quartz", "Lockdown end error", ex));
                 }
             }
         }
@@ -393,7 +391,7 @@ namespace DygBot.Services
                 var logging = (LoggingService)dataMap["Logging"];
                 var reddit = (RedditClient)dataMap["Reddit"];
 
-                await logging.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Sending half-an-hour"));
+                await LoggingService.OnLogAsync(new LogMessage(LogSeverity.Info, "Quartz", "Sending half-an-hour"));
 
                 foreach (var guild in git.Config.Servers)
                 {

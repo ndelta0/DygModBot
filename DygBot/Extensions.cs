@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 using Discord;
-using Discord.Rest;
 using Discord.WebSocket;
 
 using DygBot.Models;
@@ -62,9 +60,9 @@ namespace DygBot
         public static string GetAvatarUrlSafe(this IUser user, ImageFormat format = ImageFormat.Auto, ushort size = 128)
             => user.GetAvatarUrl(format, size) ?? user.GetDefaultAvatarUrl();
 
-        public static async Task<IUserMessage> SendMessageAsync(this IMessageChannel channel, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, AllowedMentions allowedMentions = null, MessageReference messageReference = null, IEmote[] emotes = null, RequestOptions emotesOptions = null)
+        public static async Task<IUserMessage> SendMessageAsync(this IMessageChannel channel, string text = null, bool isTTS = false, Embed embed = null, RequestOptions options = null, MessageReference messageReference = null, IEmote[] emotes = null, RequestOptions emotesOptions = null)
         {
-            var message = await channel.SendMessageAsync(text, isTTS, embed, options, allowedMentions, messageReference);
+            var message = await channel.SendMessageAsync(text, isTTS, embed, options, messageReference);
             if (emotes != null)
             {
                 await message.AddReactionsAsync(emotes, emotesOptions);
